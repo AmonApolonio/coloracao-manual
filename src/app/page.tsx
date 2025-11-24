@@ -1,50 +1,29 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Layout,
   Tabs,
   Card,
   Button,
-  Modal,
-  Form,
-  Select,
-  Input,
   Avatar,
-  Space,
   Empty,
   Spin,
   message,
 } from 'antd'
-import { UserOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons'
+import { UserOutlined, PlusOutlined, EditOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import type { TabsProps } from 'antd'
 import { supabase } from '@/lib/supabase'
-import { ColorSeason, User, UserWithAnalysis } from '@/lib/types'
+import { User, UserWithAnalysis } from '@/lib/types'
 
 const { Content } = Layout
 
-const COLOR_SEASONS: ColorSeason[] = [
-  'Verão Frio',
-  'Verão Suave',
-  'Verão Claro',
-  'Inverno Frio',
-  'Inverno Brilhante',
-  'Inverno Escuro',
-  'Outono Quente',
-  'Outono Suave',
-  'Outono Escuro',
-  'Primavera Brilhante',
-  'Primavera Clara',
-  'Primavera Quente',
-]
-
 export default function Home() {
+  const router = useRouter()
   const [usersWithoutAnalysis, setUsersWithoutAnalysis] = useState<User[]>([])
   const [usersWithAnalysis, setUsersWithAnalysis] = useState<UserWithAnalysis[]>([])
   const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [form] = Form.useForm()
 
   useEffect(() => {
     loadData()
@@ -87,58 +66,47 @@ export default function Home() {
     }
   }
 
-  const handleAnalyzeUser = (user: User) => {
-    setSelectedUser(user)
-    form.resetFields()
-    setModalOpen(true)
-  }
-
-  const handleModalOk = async () => {
+  const handleAnalyzeUser = async (user: User) => {
     try {
-      const values = await form.validateFields()
-
-      if (!selectedUser) return
-
-      // Check if analysis already exists
+      // Check if analysis exists
       const { data: existingAnalysis, error: checkError } = await supabase
         .from('analyses')
         .select('id')
-        .eq('user_id', selectedUser.id)
+        .eq('user_id', user.id)
         .maybeSingle()
 
       if (checkError && checkError.code !== 'PGRST116') {
         throw checkError
       }
 
+      let analysisId: string
+
       if (existingAnalysis) {
-        // Update existing analysis
-        await supabase
-          .from('analyses')
-          .update({
-            color_season: values.colorSeason,
-            notes: values.notes || null,
-            analyzed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', selectedUser.id)
+        // Navigate to existing analysis
+        analysisId = existingAnalysis.id
       } else {
         // Create new analysis
-        await supabase.from('analyses').insert({
-          user_id: selectedUser.id,
-          color_season: values.colorSeason,
-          notes: values.notes || null,
-          analyzed_at: new Date().toISOString(),
-        })
+        const { data: newAnalysis, error: insertError } = await supabase
+          .from('analyses')
+          .insert({
+            user_id: user.id,
+            status: 'not_started',
+            current_step: 1,
+            step_data: {},
+          })
+          .select('id')
+          .single()
+
+        if (insertError) throw insertError
+        if (!newAnalysis) throw new Error('Failed to create analysis')
+
+        analysisId = newAnalysis.id
       }
 
-      message.success('Análise salva com sucesso!')
-      setModalOpen(false)
-      setSelectedUser(null)
-      form.resetFields()
-      loadData()
+      router.push(`/analysis/${analysisId}`)
     } catch (error) {
-      console.error('Error saving analysis:', error)
-      message.error('Erro ao salvar análise')
+      console.error('Error navigating to analysis:', error)
+      message.error('Erro ao abrir análise')
     }
   }
 
@@ -154,9 +122,9 @@ export default function Home() {
           <div className="font-semibold">{user.name}</div>
           {analysis ? (
             <div className="text-sm text-gray-600">
-              <div><strong>Tipo:</strong> {analysis.color_season}</div>
-              {analysis.notes && (
-                <div><strong>Notas:</strong> {analysis.notes}</div>
+              <div><strong>Tipo:</strong> {analysis.color_season || 'Pendente'}</div>
+              {analysis.status === 'in_process' && (
+                <div className="text-xs text-blue-600">Em progresso - Etapa {analysis.current_step}</div>
               )}
             </div>
           ) : (
@@ -170,7 +138,7 @@ export default function Home() {
         icon={analysis ? <EditOutlined /> : <PlusOutlined />}
         onClick={() => handleAnalyzeUser(user)}
       >
-        {analysis ? 'Editar' : 'Analisar'}
+        {analysis ? 'Continuar' : 'Iniciar'}
       </Button>
     </div>
   )
@@ -233,76 +201,6 @@ export default function Home() {
           </Spin>
         </div>
       </Content>
-
-      <Modal
-        title={
-          selectedUser
-            ? `Analisar: ${selectedUser.name}`
-            : 'Nova Análise'
-        }
-        open={modalOpen}
-        onOk={handleModalOk}
-        onCancel={() => {
-          setModalOpen(false)
-          setSelectedUser(null)
-          form.resetFields()
-        }}
-        okText="Salvar"
-        cancelText="Cancelar"
-      >
-        {selectedUser && (
-          <div className="mb-4">
-            <div className="flex items-center gap-4 pb-4 border-b-2 border-selected">
-              <Avatar
-                size={64}
-                icon={<UserOutlined />}
-                src={selectedUser.face_photo_url || undefined}
-              />
-              <div>
-                <div className="font-semibold text-lg">{selectedUser.name}</div>
-                {selectedUser.face_photo_url && (
-                  <div className="text-sm text-gray-500">Foto de rosto</div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{
-            colorSeason: '',
-            notes: '',
-          }}
-        >
-          <Form.Item
-            label="Tipo de Coloração"
-            name="colorSeason"
-            rules={[
-              { required: true, message: 'Por favor selecione um tipo' },
-            ]}
-          >
-            <Select
-              placeholder="Selecione um tipo de coloração"
-              options={COLOR_SEASONS.map(season => ({
-                label: season,
-                value: season,
-              }))}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Notas (opcional)"
-            name="notes"
-          >
-            <Input.TextArea
-              rows={3}
-              placeholder="Adicione notas sobre a análise..."
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
     </Layout>
   )
 }

@@ -54,7 +54,9 @@ export async function getUsersWithAnalysis(): Promise<UserWithAnalysis[]> {
         id,
         user_id,
         color_season,
-        notes,
+        status,
+        current_step,
+        step_data,
         analyzed_at,
         created_at,
         updated_at
@@ -71,7 +73,7 @@ export async function getUsersWithAnalysis(): Promise<UserWithAnalysis[]> {
   return (data || []).map(user => ({
     ...user,
     analysis: user.analyses?.[0] || null
-  }))
+  })) as UserWithAnalysis[]
 }
 
 /**
@@ -96,8 +98,7 @@ export async function getAllUsers(): Promise<User[]> {
  */
 export async function createOrUpdateAnalysis(
   userId: string,
-  colorSeason: string,
-  notes?: string
+  colorSeason: string
 ): Promise<Analysis> {
   const { data, error } = await supabaseServer
     .from('analyses')
@@ -105,7 +106,6 @@ export async function createOrUpdateAnalysis(
       {
         user_id: userId,
         color_season: colorSeason,
-        notes: notes || null,
         analyzed_at: new Date().toISOString()
       },
       { onConflict: 'user_id' }
