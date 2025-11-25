@@ -2,20 +2,44 @@
 
 import { useState, useEffect, use, useRef } from 'react'
 import { Layout, Card, Steps, Button, Space, message, Spin, Badge } from 'antd'
-import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, ArrowRightOutlined, SaveOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { User, Analysis, AnalysisStatus, StepData } from '@/lib/types'
+import { User, Analysis, AnalysisStatus, SVGVectorData } from '@/lib/types'
 import InteractiveColorExtractionStep, { type InteractiveColorExtractionStepHandle } from '../steps/InteractiveColorExtractionStep'
 
 const { Content } = Layout
 
 const ANALYSIS_STEPS = [
   { title: 'Extração de Cor', key: 'color-extraction' },
-  { title: 'Análise Complementar', key: 'complementary' },
-  { title: 'Diagnóstico', key: 'diagnosis' },
-  { title: 'Revisão Final', key: 'review' },
+  { title: 'Análise dos Pigmentos', key: 'pigment-analysis' },
+  { title: 'Análise das Máscaras', key: 'mask-analysis' },
+  { title: 'Classificação Final', key: 'final-classification' },
 ]
+
+const COLOR_FIELDS = [
+  'iris',
+  'raiz_cabelo',
+  'sobrancelha',
+  'testa',
+  'bochecha',
+  'cavidade_ocular',
+  'queixo',
+  'contorno_boca',
+  'boca',
+] as const
+
+const isAllColorsExtracted = (svgVectorData: SVGVectorData | undefined): boolean => {
+  if (!svgVectorData) {
+    console.warn('No SVG data')
+    return false
+  }
+  const result = COLOR_FIELDS.every(field => {
+    const hasField = field in svgVectorData
+    return hasField
+  })
+  return result
+}
 
 interface AnalysisPageProps {
   params: Promise<{
@@ -31,7 +55,20 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [allColorsExtracted, setAllColorsExtracted] = useState(false)
   const colorExtractionRef = useRef<InteractiveColorExtractionStepHandle>(null)
+
+  // Initialize allColorsExtracted based on existing data
+  useEffect(() => {
+    if (analysis?.extracao) {
+      setAllColorsExtracted(isAllColorsExtracted(analysis.extracao as SVGVectorData))
+    }
+  }, [analysis?.extracao])
+
+  const handleColorDataChange = (svgVectorData: SVGVectorData) => {
+    const extracted = isAllColorsExtracted(svgVectorData)
+    setAllColorsExtracted(extracted)
+  }
 
   useEffect(() => {
     loadData()
@@ -79,56 +116,19 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     }
   }
 
-  const handleSaveStep = async (stepData: StepData, hexColors?: Record<string, any>) => {
+  // Save handler for step 0 (Color Extraction) - updates extracao
+  const handleSaveColorExtractionStep = async (svgVectorData: any) => {
     if (!analysis) return
 
     try {
       setSaving(true)
 
-      const updatedStepData = {
-        ...analysis.step_data,
-        ...stepData,
-      }
-
-      // Extract color_hex and shapes from step data
-      const colorHexData: Record<string, any> = {}
-      const shapesData: Record<string, any> = {}
-
-      // Build color_hex from passed hexColors parameter
-      if (hexColors) {
-        Object.entries(hexColors).forEach(([field, hex]) => {
-          if (hex) {
-            colorHexData[field] = hex
-          }
-        })
-      }
-
-      // Build shapes from the color extraction data
-      Object.entries(updatedStepData).forEach(([field, data]: [string, any]) => {
-        if (data && typeof data === 'object') {
-          // Store polygon shapes in shapes column
-          if (data.shapes && Array.isArray(data.shapes) && data.shapes.length > 0) {
-            shapesData[field] = data.shapes
-          }
-        }
-      })
-
-      console.log('Saving with color_hex:', colorHexData)
-      console.log('Saving with shapes:', shapesData)
-
+      // Save SVG vectors directly to extracao column
       const updatePayload: any = {
         current_step: currentStep + 1,
-        step_data: updatedStepData,
         status: 'in_process' as AnalysisStatus,
         updated_at: new Date().toISOString(),
-      }
-
-      // Only add color_hex and shapes if they have data
-      if (Object.keys(colorHexData).length > 0) {
-        updatePayload.color_hex = colorHexData
-      }
-      if (Object.keys(shapesData).length > 0) {
-        updatePayload.shapes = shapesData
+        extracao: svgVectorData, // SVG vectors stored as extracao
       }
 
       const { error } = await supabase
@@ -144,9 +144,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
       setAnalysis({
         ...analysis,
         current_step: currentStep + 1,
-        step_data: updatedStepData,
-        color_hex: colorHexData,
-        shapes: shapesData,
+        extracao: svgVectorData,
         status: 'in_process',
       })
 
@@ -159,6 +157,88 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     } catch (error) {
       console.error('Error saving step:', error)
       message.error('Erro ao salvar progresso')
+      throw error
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Generic save handler for other steps (steps 1-3) - does NOT update extracao
+  const handleSaveOtherStep = async () => {
+    if (!analysis) return
+
+    try {
+      setSaving(true)
+
+      // Update only current_step and status, preserving existing extracao data
+      const updatePayload: any = {
+        current_step: currentStep + 1,
+        status: 'in_process' as AnalysisStatus,
+        updated_at: new Date().toISOString(),
+      }
+
+      const { error } = await supabase
+        .from('analyses')
+        .update(updatePayload)
+        .eq('id', analysis.id)
+
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+
+      setAnalysis({
+        ...analysis,
+        current_step: currentStep + 1,
+        status: 'in_process',
+      })
+
+      // Move to next step
+      if (currentStep < ANALYSIS_STEPS.length - 1) {
+        setCurrentStep(currentStep + 1)
+      }
+
+      message.success('Progresso salvo!')
+    } catch (error) {
+      console.error('Error saving step:', error)
+      message.error('Erro ao salvar progresso')
+      throw error
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Save and exit handler - only updates extracao for step 0
+  const handleSaveAndExit = async (svgVectorData: any) => {
+    if (!analysis) return
+
+    try {
+      setSaving(true)
+
+      const updatePayload: any = {
+        status: 'in_process' as AnalysisStatus,
+        updated_at: new Date().toISOString(),
+      }
+
+      // Only update extracao if on step 0 (color extraction)
+      if (currentStep === 0) {
+        updatePayload.extracao = svgVectorData
+      }
+
+      const { error } = await supabase
+        .from('analyses')
+        .update(updatePayload)
+        .eq('id', analysis.id)
+
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+
+      message.success('Dados salvos!')
+    } catch (error) {
+      console.error('Error saving:', error)
+      message.error('Erro ao salvar dados')
       throw error
     } finally {
       setSaving(false)
@@ -254,41 +334,34 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
                 </div>
                 {/* Action Buttons */}
                 <div className="mb-8 flex justify-between">
+
                   <Space>
                     {currentStep > 0 && (
                       <Button
+                        type="primary"
+                        size="large"
                         icon={<ArrowLeftOutlined />}
                         onClick={() => setCurrentStep(currentStep - 1)}
                       >
-                        Voltar
+                        Anterior
                       </Button>
                     )}
-                  </Space>
-
-                  <Space>
                     <Button
                       size="large"
                       icon={<SaveOutlined />}
                       loading={saving}
                       onClick={async () => {
                         try {
-                          setSaving(true)
-                          // Get current step data from the ref if on step 0
-                          let stepData = analysis?.step_data || {}
-                          let hexColors = {}
+                          let svgVectorData = {}
                           if (currentStep === 0 && colorExtractionRef.current) {
-                            stepData = colorExtractionRef.current.getColorData()
-                            hexColors = colorExtractionRef.current.getHexColors()
+                            svgVectorData = colorExtractionRef.current.getSVGVectorData()
                           }
-                          await handleSaveStep(stepData, hexColors)
-                          // Wait a moment for the save to complete
+                          await handleSaveAndExit(svgVectorData)
                           await new Promise(resolve => setTimeout(resolve, 500))
                           router.push('/')
                         } catch (error) {
                           console.error('Error during save and exit:', error)
                           message.error('Erro ao salvar antes de sair')
-                        } finally {
-                          setSaving(false)
                         }
                       }}
                     >
@@ -310,18 +383,26 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
                         type="primary"
                         size="large"
                         loading={saving}
+                        disabled={(() => {
+                          const isDisabled = currentStep === 0 && !allColorsExtracted
+                          return isDisabled
+                        })()}
                         onClick={() => {
-                          // Get current step data from the ref if on step 0
-                          let stepData = analysis?.step_data || {}
-                          let hexColors = {}
-                          if (currentStep === 0 && colorExtractionRef.current) {
-                            stepData = colorExtractionRef.current.getColorData()
-                            hexColors = colorExtractionRef.current.getHexColors()
+                          if (currentStep === 0) {
+                            // Step 0: Get color extraction data and save
+                            let svgVectorData = {}
+                            if (colorExtractionRef.current) {
+                              svgVectorData = colorExtractionRef.current.getSVGVectorData()
+                            }
+                            handleSaveColorExtractionStep(svgVectorData)
+                          } else {
+                            // Steps 1-3: Save without updating extracao
+                            handleSaveOtherStep()
                           }
-                          handleSaveStep(stepData, hexColors)
                         }}
                       >
                         Próximo
+                        <ArrowRightOutlined />
                       </Button>
                     )}
                   </Space>
@@ -354,19 +435,21 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
               </div>
             )}
             {currentStep === 0 && (
-              <InteractiveColorExtractionStep
-                ref={colorExtractionRef}
-                userFacePhotoUrl={user.face_photo_url}
-                userEyePhotoUrl={user.eye_photo_url}
-                onSave={handleSaveStep}
-                initialData={analysis.step_data}
-                initialHexColors={analysis.color_hex}
-              />
+              <>
+                <InteractiveColorExtractionStep
+                  ref={colorExtractionRef}
+                  userFacePhotoUrl={user.face_photo_url}
+                  userEyePhotoUrl={user.eye_photo_url}
+                  onSave={handleSaveColorExtractionStep}
+                  initialData={analysis.extracao as SVGVectorData}
+                  onDataChange={handleColorDataChange}
+                />
+              </>
             )}
 
             {currentStep === 1 && (
               <Card className="border-secondary border-2">
-                <h2 className="text-xl font-bold text-secondary mb-4">Análise Complementar</h2>
+                <h2 className="text-xl font-bold text-secondary mb-4">Análise dos Pigmentos</h2>
                 <div className="text-center py-12 text-gray-400">
                   <p>Próximas etapas em desenvolvimento...</p>
                 </div>
@@ -375,7 +458,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
 
             {currentStep === 2 && (
               <Card className="border-secondary border-2">
-                <h2 className="text-xl font-bold text-secondary mb-4">Diagnóstico</h2>
+                <h2 className="text-xl font-bold text-secondary mb-4">Análise das Máscaras</h2>
                 <div className="text-center py-12 text-gray-400">
                   <p>Próximas etapas em desenvolvimento...</p>
                 </div>
@@ -384,7 +467,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
 
             {currentStep === 3 && (
               <Card className="border-secondary border-2">
-                <h2 className="text-xl font-bold text-secondary mb-4">Revisão Final</h2>
+                <h2 className="text-xl font-bold text-secondary mb-4">Classificação Final</h2>
                 <div className="text-center py-12 text-gray-400">
                   <p>Próximas etapas em desenvolvimento...</p>
                 </div>

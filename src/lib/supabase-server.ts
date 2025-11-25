@@ -56,7 +56,7 @@ export async function getUsersWithAnalysis(): Promise<UserWithAnalysis[]> {
         color_season,
         status,
         current_step,
-        step_data,
+        extracao,
         analyzed_at,
         created_at,
         updated_at

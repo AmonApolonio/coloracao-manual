@@ -21,8 +21,9 @@ const { Content } = Layout
 
 export default function Home() {
   const router = useRouter()
-  const [usersWithoutAnalysis, setUsersWithoutAnalysis] = useState<User[]>([])
-  const [usersWithAnalysis, setUsersWithAnalysis] = useState<UserWithAnalysis[]>([])
+  const [usersPending, setUsersPending] = useState<User[]>([])
+  const [usersInAnalysis, setUsersInAnalysis] = useState<UserWithAnalysis[]>([])
+  const [usersCompleted, setUsersCompleted] = useState<UserWithAnalysis[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -46,18 +47,25 @@ export default function Home() {
 
       if (errorAnalyses) throw errorAnalyses
 
-      const analyzedUserIds = new Set(analyses?.map(a => a.user_id) || [])
+      const analyzedUserMap = new Map(analyses?.map(a => [a.user_id, a]) || [])
 
-      const pending = allUsers?.filter(u => !analyzedUserIds.has(u.id)) || []
-      const completed = (allUsers || [])
-        .filter(u => analyzedUserIds.has(u.id))
+      const pending = allUsers?.filter(u => !analyzedUserMap.has(u.id)) || []
+      const inAnalysis = (allUsers || [])
+        .filter(u => analyzedUserMap.get(u.id)?.status === 'in_process')
         .map(u => ({
           ...u,
-          analysis: analyses?.find(a => a.user_id === u.id) || null,
+          analysis: analyzedUserMap.get(u.id) || null,
+        }))
+      const completed = (allUsers || [])
+        .filter(u => analyzedUserMap.get(u.id)?.status === 'completed')
+        .map(u => ({
+          ...u,
+          analysis: analyzedUserMap.get(u.id) || null,
         }))
 
-      setUsersWithoutAnalysis(pending)
-      setUsersWithAnalysis(completed)
+      setUsersPending(pending)
+      setUsersInAnalysis(inAnalysis)
+      setUsersCompleted(completed)
     } catch (error) {
       console.error('Error loading data:', error)
       message.error('Erro ao carregar dados')
@@ -92,7 +100,7 @@ export default function Home() {
             user_id: user.id,
             status: 'not_started',
             current_step: 1,
-            step_data: {},
+            extracao: {},
           })
           .select('id')
           .single()
@@ -148,16 +156,16 @@ export default function Home() {
       key: '1',
       label: (
         <span>
-          Pendentes <span className="text-secondary">({usersWithoutAnalysis.length})</span>
+          Pendentes <span className="text-secondary">({usersPending.length})</span>
         </span>
       ),
       children: (
         <Card className="border-secondary border-2">
-          {usersWithoutAnalysis.length === 0 ? (
+          {usersPending.length === 0 ? (
             <Empty description="Nenhum usuário pendente de análise" />
           ) : (
             <div>
-              {usersWithoutAnalysis.map(user => (
+              {usersPending.map(user => (
                 <UserListItem key={user.id} user={user} />
               ))}
             </div>
@@ -169,16 +177,41 @@ export default function Home() {
       key: '2',
       label: (
         <span>
-          Analisados <span className="text-secondary">({usersWithAnalysis.length})</span>
+          Em Análise <span className="text-secondary">({usersInAnalysis.length})</span>
         </span>
       ),
       children: (
         <Card className="border-secondary border-2">
-          {usersWithAnalysis.length === 0 ? (
-            <Empty description="Nenhum usuário com análise" />
+          {usersInAnalysis.length === 0 ? (
+            <Empty description="Nenhum usuário em análise" />
           ) : (
             <div>
-              {usersWithAnalysis.map(item => (
+              {usersInAnalysis.map(item => (
+                <UserListItem
+                  key={item.id}
+                  user={item}
+                  analysis={item.analysis}
+                />
+              ))}
+            </div>
+          )}
+        </Card>
+      ),
+    },
+    {
+      key: '3',
+      label: (
+        <span>
+          Analisados <span className="text-secondary">({usersCompleted.length})</span>
+        </span>
+      ),
+      children: (
+        <Card className="border-secondary border-2">
+          {usersCompleted.length === 0 ? (
+            <Empty description="Nenhum usuário com análise completa" />
+          ) : (
+            <div>
+              {usersCompleted.map(item => (
                 <UserListItem
                   key={item.id}
                   user={item}

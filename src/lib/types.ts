@@ -16,26 +16,13 @@ export type AnalysisStatus = 'not_started' | 'in_process' | 'completed';
 
 export type ColorField = 'iris' | 'raiz_cabelo' | 'sobrancelha' | 'testa' | 'bochecha' | 'cavidade_ocular' | 'queixo' | 'contorno_boca' | 'boca';
 
-export interface PolygonShape {
-  type: 'add' | 'subtract';
-  points: number[];
-  hex: string;
+export interface SVGVector {
+  svg_path: string; // SVG path string (e.g., "M10,10 L20,20 L30,30")
+  stroke_width: number; // Line thickness in pixels
+  hex_color: string; // Extracted color hex value (#RRGGBB)
 }
 
-export interface ColorData {
-  points: number[];
-  shapes?: PolygonShape[];
-}
-
-export type ColorExtractionData = Partial<Record<ColorField, ColorData>>;
-
-export type ColorHexData = Partial<Record<ColorField, string>>;
-
-export type ShapesData = Partial<Record<ColorField, PolygonShape[]>>;
-
-export type StepData = ColorExtractionData & {
-  [key: string]: any;
-};
+export type SVGVectorData = Partial<Record<ColorField, SVGVector>>;
 
 export interface User {
   id: string;
@@ -52,9 +39,7 @@ export interface Analysis {
   color_season: ColorSeason | null;
   status: AnalysisStatus;
   current_step: number;
-  step_data: StepData;
-  color_hex?: ColorHexData;
-  shapes?: ShapesData;
+  extracao?: SVGVectorData;
   analyzed_at: string | null;
   created_at: string;
   updated_at: string;
