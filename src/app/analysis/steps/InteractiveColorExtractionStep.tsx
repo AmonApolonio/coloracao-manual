@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Stage, Layer, Image as KonvaImage, Line } from 'react-konva'
-import { Button, Card, message } from 'antd'
+import { Button, Card, App as AntdApp } from 'antd'
 import { DeleteOutlined, UndoOutlined, SaveOutlined } from '@ant-design/icons'
 import Konva from 'konva'
 import { ColorField, SVGVectorData, SVGVector } from '@/lib/types'
@@ -46,6 +46,7 @@ const InteractiveColorExtractionStepComponent = forwardRef<
     }: InteractiveColorExtractionStepProps,
     ref
   ) => {
+    const { message } = AntdApp.useApp()
     const STAGE_SIZE = 750
     const stageRef = useRef<Konva.Stage>(null)
     const layerRef = useRef<Konva.Layer>(null)

@@ -19,13 +19,6 @@ const MAIN_ANALYSIS_STEPS = [
   { title: 'Classificação Final', key: 'final-classification' },
 ]
 
-const PIGMENT_SUB_STEPS = [
-  { title: 'Temperatura', key: 'pigment-temperatura' },
-  { title: 'Intensidade', key: 'pigment-intensidade' },
-  { title: 'Profundidade', key: 'pigment-profundidade' },
-  { title: 'Geral', key: 'pigment-geral' },
-]
-
 // Map global step index to main step and sub-step
 const getStepMapping = (globalStep: number) => {
   if (globalStep === 0) return { mainStep: 0, subStep: -1 }
@@ -236,9 +229,9 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
       })
       setExtractedColors(colors)
     }
-  }, [analysis?.extracao])
+  }, [analysis?.id])
 
-  const handleColorDataChange = (svgVectorData: SVGVectorData) => {
+  const handleColorDataChange = useCallback((svgVectorData: SVGVectorData) => {
     const extracted = isAllColorsExtracted(svgVectorData)
     setAllColorsExtracted(extracted)
     // Count extracted colors
@@ -252,7 +245,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
       }
     })
     setExtractedColors(colors)
-  }
+  }, [])
 
   // Callback for pigment data changes - wrapped in useCallback to prevent infinite loops
   const handlePigmentDataChange = useCallback((data: PigmentAnalysisDataDB) => {
@@ -260,55 +253,55 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
   }, [])
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+
+        // Fetch analysis
+        const { data: analysisData, error: analysisError } = await supabase
+          .from('analyses')
+          .select('*')
+          .eq('id', analysisId)
+          .maybeSingle()
+
+        if (analysisError) throw analysisError
+        if (!analysisData) {
+          message.error('Análise não encontrada')
+          router.push('/')
+          return
+        }
+
+        setAnalysis(analysisData)
+
+        // Fetch user
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', analysisData.user_id)
+          .maybeSingle()
+
+        if (userError) throw userError
+        if (userData) {
+          setUser(userData)
+        }
+
+        // Load pigment analysis data if it exists
+        if (analysisData.analise_pigmentos) {
+          setPigmentAnalysisData(analysisData.analise_pigmentos)
+        }
+
+        // Set current step from analysis
+        setCurrentStep(analysisData.current_step - 1)
+      } catch (error) {
+        console.error('Error loading data:', error)
+        message.error('Erro ao carregar dados')
+      } finally {
+        setLoading(false)
+      }
+    }
+
     loadData()
   }, [analysisId])
-
-  const loadData = async () => {
-    try {
-      setLoading(true)
-
-      // Fetch analysis
-      const { data: analysisData, error: analysisError } = await supabase
-        .from('analyses')
-        .select('*')
-        .eq('id', analysisId)
-        .maybeSingle()
-
-      if (analysisError) throw analysisError
-      if (!analysisData) {
-        message.error('Análise não encontrada')
-        router.push('/')
-        return
-      }
-
-      setAnalysis(analysisData)
-
-      // Fetch user
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', analysisData.user_id)
-        .maybeSingle()
-
-      if (userError) throw userError
-      if (userData) {
-        setUser(userData)
-      }
-
-      // Load pigment analysis data if it exists
-      if (analysisData.analise_pigmentos) {
-        setPigmentAnalysisData(analysisData.analise_pigmentos)
-      }
-
-      // Set current step from analysis
-      setCurrentStep(analysisData.current_step - 1)
-    } catch (error) {
-      console.error('Error loading data:', error)
-      message.error('Erro ao carregar dados')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Save handler for step 0 (Color Extraction) - updates extracao
   const handleSaveColorExtractionStep = async (svgVectorData: any) => {

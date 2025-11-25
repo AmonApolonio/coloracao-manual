@@ -229,9 +229,13 @@ export default function Home() {
     <Layout className="min-h-screen bg-background">
       <Content className="p-8">
         <div className="max-w-4xl mx-auto">
-          <Spin spinning={loading} tip="Carregando...">
+          {loading ? (
+            <div className="flex items-center justify-center min-h-96">
+              <Spin size="large" />
+            </div>
+          ) : (
             <Tabs items={items} onChange={() => {}} />
-          </Spin>
+          )}
         </div>
       </Content>
     </Layout>
