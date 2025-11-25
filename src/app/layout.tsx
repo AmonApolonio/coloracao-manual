@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ConfigProvider } from "antd";
+import { ConfigProvider, App } from "antd";
 import "./globals.css";
 import theme from "@/config/antd-theme";
 
@@ -30,7 +30,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ConfigProvider theme={theme}>
-          {children}
+          <App>
+            {children}
+          </App>
         </ConfigProvider>
       </body>
     </html>

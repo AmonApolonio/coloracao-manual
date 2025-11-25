@@ -1,21 +1,39 @@
 'use client'
 
-import { useState, useEffect, use, useRef } from 'react'
-import { Layout, Card, Steps, Button, Space, message, Spin, Badge } from 'antd'
+import { useState, useEffect, use, useRef, useCallback } from 'react'
+import { Layout, Card, Steps, Button, Space, Spin, Badge, Tooltip, App as AntdApp } from 'antd'
 import { ArrowLeftOutlined, ArrowRightOutlined, SaveOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { User, Analysis, AnalysisStatus, SVGVectorData } from '@/lib/types'
+import { PigmentAnalysisDataDB } from '@/lib/types-db'
 import InteractiveColorExtractionStep, { type InteractiveColorExtractionStepHandle } from '../steps/InteractiveColorExtractionStep'
+import PigmentAnalysisStep from '../steps/PigmentAnalysisStep'
 
 const { Content } = Layout
 
-const ANALYSIS_STEPS = [
+const MAIN_ANALYSIS_STEPS = [
   { title: 'Extração de Cor', key: 'color-extraction' },
   { title: 'Análise dos Pigmentos', key: 'pigment-analysis' },
   { title: 'Análise das Máscaras', key: 'mask-analysis' },
   { title: 'Classificação Final', key: 'final-classification' },
 ]
+
+const PIGMENT_SUB_STEPS = [
+  { title: 'Temperatura', key: 'pigment-temperatura' },
+  { title: 'Intensidade', key: 'pigment-intensidade' },
+  { title: 'Profundidade', key: 'pigment-profundidade' },
+  { title: 'Geral', key: 'pigment-geral' },
+]
+
+// Map global step index to main step and sub-step
+const getStepMapping = (globalStep: number) => {
+  if (globalStep === 0) return { mainStep: 0, subStep: -1 }
+  if (globalStep >= 1 && globalStep <= 4) return { mainStep: 1, subStep: globalStep - 1 }
+  if (globalStep === 5) return { mainStep: 2, subStep: -1 }
+  if (globalStep === 6) return { mainStep: 3, subStep: -1 }
+  return { mainStep: 0, subStep: -1 }
+}
 
 const COLOR_FIELDS = [
   'iris',
@@ -47,8 +65,147 @@ interface AnalysisPageProps {
   }>
 }
 
+// Helper function to get disabled reason tooltip
+const getDisabledReasonTooltip = (
+  stepIndex: number,
+  pigmentData: PigmentAnalysisDataDB | null,
+  extractedColorsCount: number = 0,
+  extractedColors?: { [key: string]: string }
+): string => {
+  if (stepIndex === 0) {
+    return 'Extraia todas as cores antes de prosseguir'
+  }
+
+  if (!pigmentData) {
+    return 'Nenhum dado disponível'
+  }
+
+  const COLOR_FIELDS_MAP: { [key: string]: string } = {
+    'iris': 'Íris',
+    'raiz_cabelo': 'Raiz Cabelo',
+    'sobrancelha': 'Sobrancelha',
+    'testa': 'Testa',
+    'bochecha': 'Bochecha',
+    'cavidade_ocular': 'Cavidade Ocular',
+    'queixo': 'Queixo',
+    'contorno_boca': 'Contorno Boca',
+    'boca': 'Boca',
+  }
+
+  if (stepIndex === 1) {
+    // Temperatura step
+    if (!pigmentData.temperatura) {
+      return 'Nenhuma temperatura definida'
+    }
+    const filledCount = Object.keys(pigmentData.temperatura).length
+    if (filledCount < extractedColorsCount) {
+      const missingFields = extractedColors 
+        ? Object.keys(extractedColors)
+            .filter(field => !pigmentData.temperatura || !(field in pigmentData.temperatura))
+            .map(field => COLOR_FIELDS_MAP[field] || field)
+        : []
+      return `Cores faltando: ${missingFields.join(', ')}`
+    }
+  } else if (stepIndex === 2) {
+    // Intensidade step
+    if (!pigmentData.intensidade) {
+      return 'Nenhuma intensidade definida'
+    }
+    const filledCount = Object.keys(pigmentData.intensidade).length
+    if (filledCount < extractedColorsCount) {
+      const missingFields = extractedColors 
+        ? Object.keys(extractedColors)
+            .filter(field => !pigmentData.intensidade || !(field in pigmentData.intensidade))
+            .map(field => COLOR_FIELDS_MAP[field] || field)
+        : []
+      return `Cores faltando: ${missingFields.join(', ')}`
+    }
+  } else if (stepIndex === 3) {
+    // Profundidade step
+    if (!pigmentData.profundidade) {
+      return 'Nenhuma profundidade definida'
+    }
+    const profValues = Object.values(pigmentData.profundidade)
+    if (profValues.length < 4 || profValues.some(val => val === null || val === undefined)) {
+      const COMPARISON_NAMES: { [key: string]: string } = {
+        'iris_vs_pele': 'Íris vs Tons de Pele',
+        'cavidade_ocular_vs_pele': 'Cavidade Ocular vs Tons de Pele',
+        'cabelo_vs_pele': 'Tons de Cabelo vs Tons de Pele',
+        'contorno_boca_vs_boca': 'Contorno Boca vs Boca',
+      }
+      const missingComparisons = Object.entries(pigmentData.profundidade)
+        .filter(([_, val]) => val === null || val === undefined)
+        .map(([key, _]) => COMPARISON_NAMES[key] || key)
+      return `Comparações faltando: ${missingComparisons.join(', ')}`
+    }
+  } else if (stepIndex === 4) {
+    // Geral step
+    if (!pigmentData.geral) {
+      return 'Nenhum dado geral definido'
+    }
+    const missing = []
+    if (pigmentData.geral.temperatura === null || pigmentData.geral.temperatura === undefined) {
+      missing.push('Temperatura')
+    }
+    if (pigmentData.geral.intensidade === null || pigmentData.geral.intensidade === undefined) {
+      missing.push('Intensidade')
+    }
+    if (pigmentData.geral.profundidade === null || pigmentData.geral.profundidade === undefined) {
+      missing.push('Profundidade')
+    }
+    if (missing.length > 0) {
+      return `Campos faltando: ${missing.join(', ')}`
+    }
+  }
+
+  return 'Preencha todos os campos para continuar'
+}
+
+// Helper function to check if a pigment analysis step is complete
+const isPigmentStepComplete = (
+  stepIndex: number,
+  pigmentData: PigmentAnalysisDataDB | null,
+  extractedColorsCount: number = 0
+): boolean => {
+  if (!pigmentData) return false
+
+  if (stepIndex === 1) {
+    // Temperatura step - check if all extracted colors have temperature values
+    if (!pigmentData.temperatura) return false
+    const tempCount = Object.keys(pigmentData.temperatura).length
+    // All extracted colors must have temperature values
+    return tempCount > 0 && tempCount === extractedColorsCount
+  } else if (stepIndex === 2) {
+    // Intensidade step - check if all extracted colors have intensidade values
+    if (!pigmentData.intensidade) return false
+    const intCount = Object.keys(pigmentData.intensidade).length
+    // All extracted colors must have intensidade values
+    return intCount > 0 && intCount === extractedColorsCount
+  } else if (stepIndex === 3) {
+    // Profundidade step - check if all 4 comparisons have values
+    if (!pigmentData.profundidade) return false
+    const profValues = Object.values(pigmentData.profundidade)
+    // All 4 comparisons must have values
+    return profValues.length === 4 && profValues.every(val => val !== null && val !== undefined)
+  } else if (stepIndex === 4) {
+    // Geral step - check if all geral values are set
+    if (!pigmentData.geral) return false
+    return (
+      pigmentData.geral.temperatura !== null &&
+      pigmentData.geral.temperatura !== undefined &&
+      pigmentData.geral.intensidade !== null &&
+      pigmentData.geral.intensidade !== undefined &&
+      pigmentData.geral.profundidade !== null &&
+      pigmentData.geral.profundidade !== undefined
+    )
+  }
+
+  return false
+}
+
 export default function AnalysisPage({ params }: AnalysisPageProps) {
   const router = useRouter()
+  const { message } = AntdApp.useApp()
   const { id: analysisId } = use(params)
   const [user, setUser] = useState<User | null>(null)
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
@@ -56,19 +213,51 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [allColorsExtracted, setAllColorsExtracted] = useState(false)
+  const [extractedColorsCount, setExtractedColorsCount] = useState(0)
+  const [extractedColors, setExtractedColors] = useState<{ [key: string]: string }>({})
+  const [pigmentAnalysisData, setPigmentAnalysisData] = useState<PigmentAnalysisDataDB | null>(null)
   const colorExtractionRef = useRef<InteractiveColorExtractionStepHandle>(null)
 
   // Initialize allColorsExtracted based on existing data
   useEffect(() => {
     if (analysis?.extracao) {
-      setAllColorsExtracted(isAllColorsExtracted(analysis.extracao as SVGVectorData))
+      const isExtracted = isAllColorsExtracted(analysis.extracao as SVGVectorData)
+      setAllColorsExtracted(isExtracted)
+      // Count extracted colors
+      const svgData = analysis.extracao as SVGVectorData
+      const count = Object.keys(svgData).length
+      setExtractedColorsCount(count)
+      // Store extracted colors
+      const colors: { [key: string]: string } = {}
+      Object.entries(svgData).forEach(([field, vectorData]) => {
+        if (vectorData?.hex_color) {
+          colors[field] = vectorData.hex_color
+        }
+      })
+      setExtractedColors(colors)
     }
   }, [analysis?.extracao])
 
   const handleColorDataChange = (svgVectorData: SVGVectorData) => {
     const extracted = isAllColorsExtracted(svgVectorData)
     setAllColorsExtracted(extracted)
+    // Count extracted colors
+    const count = Object.keys(svgVectorData).length
+    setExtractedColorsCount(count)
+    // Store extracted colors
+    const colors: { [key: string]: string } = {}
+    Object.entries(svgVectorData).forEach(([field, vectorData]) => {
+      if (vectorData?.hex_color) {
+        colors[field] = vectorData.hex_color
+      }
+    })
+    setExtractedColors(colors)
   }
+
+  // Callback for pigment data changes - wrapped in useCallback to prevent infinite loops
+  const handlePigmentDataChange = useCallback((data: PigmentAnalysisDataDB) => {
+    setPigmentAnalysisData(data)
+  }, [])
 
   useEffect(() => {
     loadData()
@@ -104,6 +293,11 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
       if (userError) throw userError
       if (userData) {
         setUser(userData)
+      }
+
+      // Load pigment analysis data if it exists
+      if (analysisData.analise_pigmentos) {
+        setPigmentAnalysisData(analysisData.analise_pigmentos)
       }
 
       // Set current step from analysis
@@ -149,7 +343,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
       })
 
       // Move to next step
-      if (currentStep < ANALYSIS_STEPS.length - 1) {
+      if (currentStep < TOTAL_STEPS - 1) {
         setCurrentStep(currentStep + 1)
       }
 
@@ -163,18 +357,52 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     }
   }
 
-  // Generic save handler for other steps (steps 1-3) - does NOT update extracao
+  // Merge pigment analysis data: combine current step data with existing data
+  const mergePigmentAnalysisData = (
+    currentStepIndex: number,
+    newData: PigmentAnalysisDataDB
+  ): PigmentAnalysisDataDB => {
+    // Start with existing data
+    let merged = analysis?.analise_pigmentos ? { ...analysis.analise_pigmentos } : {}
+
+    // Determine which step we're saving (currentStep is 1-4 for pigment analysis)
+    // currentStep 1 = temperatura, 2 = intensidade, 3 = profundidade, 4 = geral
+    if (currentStepIndex === 1) {
+      // Saving temperatura - merge only temperatura field
+      merged.temperatura = newData.temperatura
+    } else if (currentStepIndex === 2) {
+      // Saving intensidade - merge only intensidade field
+      merged.intensidade = newData.intensidade
+    } else if (currentStepIndex === 3) {
+      // Saving profundidade - merge only profundidade field
+      merged.profundidade = newData.profundidade
+    } else if (currentStepIndex === 4) {
+      // Saving geral - merge only geral field
+      merged.geral = newData.geral
+    }
+
+    return merged
+  }
+
+  // Generic save handler for other steps (steps 1-4) - saves pigment analysis data
   const handleSaveOtherStep = async () => {
     if (!analysis) return
 
     try {
       setSaving(true)
 
-      // Update only current_step and status, preserving existing extracao data
+      // Update current_step, status, and pigment analysis data
       const updatePayload: any = {
         current_step: currentStep + 1,
         status: 'in_process' as AnalysisStatus,
         updated_at: new Date().toISOString(),
+      }
+
+      // Save pigment analysis data if we're in pigment steps (1-4)
+      if (currentStep >= 1 && currentStep <= 4 && pigmentAnalysisData) {
+        // Merge with existing data to preserve other steps
+        const mergedData = mergePigmentAnalysisData(currentStep, pigmentAnalysisData)
+        updatePayload.analise_pigmentos = mergedData
       }
 
       const { error } = await supabase
@@ -191,10 +419,11 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
         ...analysis,
         current_step: currentStep + 1,
         status: 'in_process',
+        analise_pigmentos: updatePayload.analise_pigmentos,
       })
 
       // Move to next step
-      if (currentStep < ANALYSIS_STEPS.length - 1) {
+      if (currentStep < TOTAL_STEPS - 1) {
         setCurrentStep(currentStep + 1)
       }
 
@@ -208,7 +437,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     }
   }
 
-  // Save and exit handler - only updates extracao for step 0
+  // Save and exit handler - updates extracao for step 0, pigment data for steps 1-4
   const handleSaveAndExit = async (svgVectorData: any) => {
     if (!analysis) return
 
@@ -220,9 +449,16 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
         updated_at: new Date().toISOString(),
       }
 
-      // Only update extracao if on step 0 (color extraction)
+      // Update extracao if on step 0 (color extraction)
       if (currentStep === 0) {
         updatePayload.extracao = svgVectorData
+      }
+
+      // Save pigment analysis data if we're in pigment steps (1-4)
+      if (currentStep >= 1 && currentStep <= 4 && pigmentAnalysisData) {
+        // Merge with existing data to preserve other steps
+        const mergedData = mergePigmentAnalysisData(currentStep, pigmentAnalysisData)
+        updatePayload.analise_pigmentos = mergedData
       }
 
       const { error } = await supabase
@@ -255,7 +491,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
         .from('analyses')
         .update({
           status: 'completed' as AnalysisStatus,
-          current_step: ANALYSIS_STEPS.length,
+          current_step: 6,
           analyzed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -272,6 +508,10 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
       setSaving(false)
     }
   }
+
+  // Calculate total steps (7 steps total: 0=extraction, 1-4=pigment substeps, 5=mask, 6=final)
+  const TOTAL_STEPS = 7
+  const { mainStep, subStep } = getStepMapping(currentStep)
 
   if (loading) {
     return (
@@ -368,7 +608,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
                       Salvar e Sair
                     </Button>
 
-                    {currentStep === ANALYSIS_STEPS.length - 1 ? (
+                    {currentStep === TOTAL_STEPS - 1 ? (
                       <Button
                         type="primary"
                         size="large"
@@ -378,52 +618,66 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
                       >
                         Concluir Análise
                       </Button>
-                    ) : (
-                      <Button
-                        type="primary"
-                        size="large"
-                        loading={saving}
-                        disabled={(() => {
-                          const isDisabled = currentStep === 0 && !allColorsExtracted
-                          return isDisabled
-                        })()}
-                        onClick={() => {
-                          if (currentStep === 0) {
-                            // Step 0: Get color extraction data and save
-                            let svgVectorData = {}
-                            if (colorExtractionRef.current) {
-                              svgVectorData = colorExtractionRef.current.getSVGVectorData()
-                            }
-                            handleSaveColorExtractionStep(svgVectorData)
-                          } else {
-                            // Steps 1-3: Save without updating extracao
-                            handleSaveOtherStep()
-                          }
-                        }}
-                      >
-                        Próximo
-                        <ArrowRightOutlined />
-                      </Button>
-                    )}
+                    ) : (() => {
+                      const isDisabled = currentStep === 0 
+                        ? !allColorsExtracted 
+                        : currentStep >= 1 && currentStep <= 4
+                          ? !isPigmentStepComplete(currentStep, pigmentAnalysisData, extractedColorsCount)
+                          : false
+
+                      const disabledTooltip = isDisabled 
+                        ? getDisabledReasonTooltip(currentStep, pigmentAnalysisData, extractedColorsCount, extractedColors)
+                        : null
+
+                      return (
+                        <Tooltip title={disabledTooltip} color="#ff4d4f">
+                          <Button
+                            type="primary"
+                            size="large"
+                            loading={saving}
+                            disabled={isDisabled}
+                            onClick={() => {
+                              if (currentStep === 0) {
+                                // Step 0: Get color extraction data and save
+                                let svgVectorData = {}
+                                if (colorExtractionRef.current) {
+                                  svgVectorData = colorExtractionRef.current.getSVGVectorData()
+                                }
+                                handleSaveColorExtractionStep(svgVectorData)
+                              } else {
+                                // Steps 1-6: Save without updating extracao
+                                handleSaveOtherStep()
+                              }
+                            }}
+                          >
+                            Próximo
+                            <ArrowRightOutlined />
+                          </Button>
+                        </Tooltip>
+                      )
+                    })()}
                   </Space>
                 </div>
 
               </div>
 
-              {/* Horizontal Steps */}
-              <Steps
-                current={currentStep}
-                size="small"
-                items={ANALYSIS_STEPS.map((step, idx) => ({
-                  title: step.title,
-                  status:
-                    idx < currentStep
-                      ? 'finish'
-                      : idx === currentStep
-                        ? 'process'
-                        : 'wait',
-                }))}
-              />
+              {/* Main Steps - Basic Style */}
+              <div className="mb-4">
+                <Steps
+                  current={mainStep}
+                  items={MAIN_ANALYSIS_STEPS.map((step) => ({
+                    title: step.title,
+                    status:
+                      mainStep > MAIN_ANALYSIS_STEPS.indexOf(step)
+                        ? 'finish'
+                        : mainStep === MAIN_ANALYSIS_STEPS.indexOf(step)
+                          ? 'process'
+                          : 'wait',
+                  }))}
+                />
+              </div>
+
+
             </Card>
           </div>
 
@@ -447,16 +701,20 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
               </>
             )}
 
-            {currentStep === 1 && (
-              <Card className="border-secondary border-2">
-                <h2 className="text-xl font-bold text-secondary mb-4">Análise dos Pigmentos</h2>
-                <div className="text-center py-12 text-gray-400">
-                  <p>Próximas etapas em desenvolvimento...</p>
-                </div>
-              </Card>
+            {(currentStep === 1 || currentStep === 2 || currentStep === 3 || currentStep === 4) && (
+              <PigmentAnalysisStep
+                initialData={analysis.extracao as SVGVectorData}
+                userFacePhotoUrl={user.face_photo_url || undefined}
+                currentSubStep={currentStep - 1}
+                savedAnalysisData={pigmentAnalysisData || undefined}
+                onDataChange={handlePigmentDataChange}
+                onSubStepChange={(subStep: number) => {
+                  setCurrentStep(subStep + 1)
+                }}
+              />
             )}
 
-            {currentStep === 2 && (
+            {currentStep === 5 && (
               <Card className="border-secondary border-2">
                 <h2 className="text-xl font-bold text-secondary mb-4">Análise das Máscaras</h2>
                 <div className="text-center py-12 text-gray-400">
@@ -465,7 +723,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
               </Card>
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 6 && (
               <Card className="border-secondary border-2">
                 <h2 className="text-xl font-bold text-secondary mb-4">Classificação Final</h2>
                 <div className="text-center py-12 text-gray-400">
