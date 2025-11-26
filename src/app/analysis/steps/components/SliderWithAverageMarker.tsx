@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useRef, useCallback, memo } from 'react'
 import { Slider } from 'antd'
 
 interface SliderWithAverageMarkerProps {
@@ -11,7 +12,7 @@ interface SliderWithAverageMarkerProps {
   step?: number
 }
 
-export const SliderWithAverageMarker = ({
+export const SliderWithAverageMarker = memo(({
   value,
   averageValue,
   onChange,
@@ -19,6 +20,29 @@ export const SliderWithAverageMarker = ({
   max = 100,
   step = 1,
 }: SliderWithAverageMarkerProps) => {
+  // Local state for smooth dragging without triggering parent re-renders
+  const [localValue, setLocalValue] = useState<number>(value ?? 50)
+  const isDraggingRef = useRef(false)
+  
+  // Sync from prop only when not dragging and value actually changed
+  const lastPropValueRef = useRef(value)
+  if (!isDraggingRef.current && value !== lastPropValueRef.current) {
+    lastPropValueRef.current = value
+    setLocalValue(value ?? 50)
+  }
+
+  // Handle slider change during drag - only update local state
+  const handleChange = useCallback((newValue: number) => {
+    isDraggingRef.current = true
+    setLocalValue(newValue)
+  }, [])
+
+  // Handle when dragging stops - notify parent
+  const handleChangeComplete = useCallback((newValue: number) => {
+    isDraggingRef.current = false
+    onChange(newValue)
+  }, [onChange])
+
   // Calculate the percentage position of the average value
   const averagePercentage =
     averageValue !== null ? ((averageValue - min) / (max - min)) * 100 : 0
@@ -29,8 +53,9 @@ export const SliderWithAverageMarker = ({
         min={min}
         max={max}
         step={step}
-        value={value ?? 50}
-        onChange={onChange}
+        value={localValue}
+        onChange={handleChange}
+        onChangeComplete={handleChangeComplete}
         marks={{
           0: '0',
           12.5: '12.5',
@@ -40,7 +65,7 @@ export const SliderWithAverageMarker = ({
           100: '100',
         }}
         tooltip={{
-          formatter: (value) => `${value}`,
+          open: false, // Disable tooltip to prevent positioning loops
         }}
       />
       {/* Average marker dot */}
@@ -59,4 +84,4 @@ export const SliderWithAverageMarker = ({
       )}
     </div>
   )
-}
+})

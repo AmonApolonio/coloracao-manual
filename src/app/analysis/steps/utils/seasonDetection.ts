@@ -199,3 +199,124 @@ export function getSeasonColors(season: Season, variant: SeasonVariant): string[
   const fullName = getColorSeason(season, variant)
   return colorMap[fullName] || []
 }
+
+/**
+ * Get the distance of a value from the center (50)
+ * Returns a value between 0-50
+ */
+function getDistance(value: number | null): number {
+  if (value === null) return 0
+  return Math.abs(value - 50)
+}
+
+/**
+ * Detect expected season from slider values (0-100 range)
+ * Uses the 2 most extreme characteristics to find a valid season
+ * Always returns a valid season when 2 or more characteristics are provided
+ */
+export function detectSeasonFromSliders(
+  temperatura: number | null,
+  intensidade: number | null,
+  profundidade: number | null
+): { season: Season; variant: SeasonVariant; colorSeason: ColorSeason } | null {
+  if (temperatura === null || intensidade === null || profundidade === null) {
+    return null
+  }
+
+  // Valid season combinations
+  const SEASON_COMBINATIONS = [
+    { season: 'Primavera', temp: 'quente', intens: 'brilhante', prof: 'clara' },
+    { season: 'Outono', temp: 'quente', intens: 'suave', prof: 'escura' },
+    { season: 'Verão', temp: 'fria', intens: 'suave', prof: 'clara' },
+    { season: 'Inverno', temp: 'fria', intens: 'brilhante', prof: 'escura' },
+  ]
+
+  // Calculate distances from center (50) for each attribute
+  const distances = [
+    { attr: 'temperatura', value: temperatura, distance: getDistance(temperatura) },
+    { attr: 'intensidade', value: intensidade, distance: getDistance(intensidade) },
+    { attr: 'profundidade', value: profundidade, distance: getDistance(profundidade) },
+  ]
+
+  // Sort by distance descending to find the 2 most extreme
+  const sorted = [...distances].sort((a, b) => b.distance - a.distance)
+  const [mostExtreme, secondMostExtreme] = sorted
+
+  // Build a map to find matching season combinations
+  const attributeMap: { [key: string]: { left: string; right: string } } = {
+    temperatura: { left: 'fria', right: 'quente' },
+    intensidade: { left: 'suave', right: 'brilhante' },
+    profundidade: { left: 'escura', right: 'clara' },
+  }
+
+  // Get the values for the 2 most extreme attributes
+  const mostExtremeAttr = mostExtreme.attr
+  const secondMostExtremeAttr = secondMostExtreme.attr
+  const thirdAttr = distances.find(d => d.attr !== mostExtremeAttr && d.attr !== secondMostExtremeAttr)?.attr
+
+  const mostExtremeValue = mostExtreme.value > 50
+  const secondMostExtremeValue = secondMostExtreme.value > 50
+
+  const mostExtremeVal = mostExtremeValue ? attributeMap[mostExtremeAttr].right : attributeMap[mostExtremeAttr].left
+  const secondMostExtremeVal = secondMostExtremeValue ? attributeMap[secondMostExtremeAttr].right : attributeMap[secondMostExtremeAttr].left
+  const thirdVal = thirdAttr ? (distances.find(d => d.attr === thirdAttr)!.value > 50 ? attributeMap[thirdAttr].right : attributeMap[thirdAttr].left) : null
+
+  // Build combinations to search for
+  const searchCombinations = [
+    // First try: use the 2 most extreme + the calculated third
+    {
+      [mostExtremeAttr]: mostExtremeVal,
+      [secondMostExtremeAttr]: secondMostExtremeVal,
+      [thirdAttr!]: thirdVal,
+    },
+  ]
+
+  // If first doesn't match, try other combinations of the third attribute
+  if (thirdAttr) {
+    const otherThirdVal = attributeMap[thirdAttr][thirdVal === attributeMap[thirdAttr].left ? 'right' : 'left']
+    searchCombinations.push({
+      [mostExtremeAttr]: mostExtremeVal,
+      [secondMostExtremeAttr]: secondMostExtremeVal,
+      [thirdAttr]: otherThirdVal,
+    })
+  }
+
+  // Search for a matching season
+  for (const searchCombo of searchCombinations) {
+    const match = SEASON_COMBINATIONS.find(season => {
+      let matches = true
+      for (const [key, val] of Object.entries(searchCombo)) {
+        if (key === 'temperatura' && season.temp !== val) matches = false
+        if (key === 'intensidade' && season.intens !== val) matches = false
+        if (key === 'profundidade' && season.prof !== val) matches = false
+      }
+      return matches
+    })
+
+    if (match) {
+      // Use the most extreme attribute as the variant
+      let variant: SeasonVariant
+      if (mostExtremeAttr === 'temperatura') {
+        variant = temperatura > 50 ? 'Quente' : 'Frio'
+      } else if (mostExtremeAttr === 'intensidade') {
+        variant = intensidade > 50 ? 'Brilhante' : 'Suave'
+      } else {
+        variant = profundidade > 50 ? 'Claro' : 'Escuro'
+      }
+
+      try {
+        const season = match.season as Season
+        const colorSeason = getColorSeason(season, variant)
+        return {
+          season,
+          variant,
+          colorSeason,
+        }
+      } catch {
+        continue
+      }
+    }
+  }
+
+  return null
+}

@@ -1,12 +1,23 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Tag, Tooltip, Typography } from 'antd'
 import { PigmentTemperatureDataUI, ProfundidadeComparisonUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl } from '../utils/colorConversion'
 import { getLabelColor, getLabelCategory, COLOR_FIELDS } from '../utils/PigmentAnalysisUtils'
+import { detectSeasonFromSliders } from '../utils/seasonDetection'
 import { SliderWithAverageMarker } from './SliderWithAverageMarker'
 
 const { Text } = Typography
+
+/**
+ * Calculate how far each value is from 50 (the center)
+ * Returns the distance, where max is 50
+ */
+const getDistance = (value: number | null): number => {
+  if (value === null) return 0
+  return Math.abs(value - 50)
+}
 
 interface GeralSummaryComponentProps {
   extractedColors: { [key: string]: string }
@@ -74,6 +85,22 @@ export const GeralSummaryComponent = ({
     }
   })
 
+  // Get expected season based on slider positions
+  const expectedSeason = detectSeasonFromSliders(geralTemperatura, geralIntensidade, geralProfundidade)
+
+  // Memoize change handlers to prevent unnecessary re-renders
+  const handleTemperaturaChange = useCallback((value: number) => {
+    onGeralChange('temperatura', value)
+  }, [onGeralChange])
+
+  const handleIntensidadeChange = useCallback((value: number) => {
+    onGeralChange('intensidade', value)
+  }, [onGeralChange])
+
+  const handleProfundidadeChange = useCallback((value: number) => {
+    onGeralChange('profundidade', value)
+  }, [onGeralChange])
+
   return (
     <div className="space-y-8">
       {/* Colors Reference Section */}
@@ -97,7 +124,7 @@ export const GeralSummaryComponent = ({
           <div>
             <div className="space-y-2">
               {colorSwatches.map(({ field, label, hex }) => (
-                <Tooltip key={`orig-${field}`} title={label} color="#fff">
+                <Tooltip key={`orig-${field}`} title={label} color="#fff" destroyOnHidden>
                   <div
                     className="w-full h-10 rounded-lg border-2 border-gray-300 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
                     style={{ backgroundColor: hex }}
@@ -111,7 +138,7 @@ export const GeralSummaryComponent = ({
           <div>
             <div className="space-y-2">
               {colorSwatches.map(({ field, label, hex }) => (
-                <Tooltip key={`desat-${field}`} title={label} color="#fff">
+                <Tooltip key={`desat-${field}`} title={label} color="#fff" destroyOnHidden>
                   <div
                     className="w-full h-10 rounded-lg border-2 border-gray-300 shadow-md cursor-pointer hover:shadow-lg transition-shadow"
                     style={{ backgroundColor: getDesaturatedColor(hex) }}
@@ -122,6 +149,57 @@ export const GeralSummaryComponent = ({
           </div>
         </div>
       </div>
+
+      {/* Expected Season Section */}
+      {expectedSeason && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-gray-700">Estação Resultante</h3>
+          
+          <div className="flex gap-3">
+            <Tooltip 
+              title={
+                <div className="text-xs space-y-2">
+                  <div className="font-semibold">Detectado por:</div>
+                  <div className="space-y-1 text-gray-700">
+                    <div>• Temperatura: <span className="font-medium">{getDistance(geralTemperatura)} para o {geralTemperatura && geralTemperatura > 50 ? 'Quente' : 'Frio'}</span></div>
+                    <div>• Intensidade: <span className="font-medium">{getDistance(geralIntensidade)} para o {geralIntensidade && geralIntensidade > 50 ? 'Brilhante' : 'Suave'}</span></div>
+                    <div>• Profundidade: <span className="font-medium">{getDistance(geralProfundidade)} para o {geralProfundidade && geralProfundidade > 50 ? 'Claro' : 'Escuro'}</span></div>
+                  </div>
+                </div>
+              }
+              color="#fff"
+              destroyOnHidden
+            >
+              <div className="px-3 py-2 rounded bg-gray-100 border border-gray-400 cursor-help hover:bg-gray-200 hover:border-gray-500 transition-all shadow-sm">
+                <Text className="text-sm font-bold text-gray-900">
+                  {expectedSeason.season}
+                </Text>
+              </div>
+            </Tooltip>
+
+            <Tooltip 
+              title={
+                <div className="text-xs space-y-2">
+                  <div className="font-semibold">Detectado por:</div>
+                  <div className="space-y-1 text-gray-700">
+                    <div>• Temperatura: <span className="font-medium">{getDistance(geralTemperatura)} para o {geralTemperatura && geralTemperatura > 50 ? 'Quente' : 'Frio'}</span></div>
+                    <div>• Intensidade: <span className="font-medium">{getDistance(geralIntensidade)} para o {geralIntensidade && geralIntensidade > 50 ? 'Brilhante' : 'Suave'}</span></div>
+                    <div>• Profundidade: <span className="font-medium">{getDistance(geralProfundidade)} para o {geralProfundidade && geralProfundidade > 50 ? 'Claro' : 'Escuro'}</span></div>
+                  </div>
+                </div>
+              }
+              color="#fff"
+              destroyOnHidden
+            >
+              <div className="px-3 py-2 rounded bg-gray-100 border border-gray-400 cursor-help hover:bg-gray-200 hover:border-gray-500 transition-all shadow-sm">
+                <Text className="text-sm font-bold text-gray-900">
+                  {expectedSeason.variant}
+                </Text>
+              </div>
+            </Tooltip>
+          </div>
+        </div>
+      )}
 
       {/* Summary Sliders Section */}
       <div className="space-y-6">
@@ -140,46 +218,17 @@ export const GeralSummaryComponent = ({
               </Tag>
             </div>
 
-            <Tooltip
-              title={
-                <div className="text-xs space-y-1">
-                  <div className="font-semibold mb-2">
-                    Cálculo da Média Individual
-                  </div>
-                  {analysisData.temperatura &&
-                    Object.entries(analysisData.temperatura).map(
-                      ([field, data]) => (
-                        <div key={field}>
-                          {
-                            COLOR_FIELDS.find((f) => f.value === field)
-                              ?.label
-                          }
-                          : {data.temperature}
-                        </div>
-                      )
-                    )}
-                  <div className="border-t border-gray-400 pt-1 mt-2 font-semibold">
-                    Total:{' '}
-                    {Object.values(analysisData.temperatura || {}).reduce(
-                      (sum, d) => sum + (d.temperature ?? 0),
-                      0
-                    )}{' '}
-                    ÷ {Object.keys(analysisData.temperatura || {}).length} ={' '}
-                    {avgTemperatura}
-                  </div>
-                </div>
-              }
-              color="#fff"
+            <div 
+              className="flex flex-col cursor-help"
+              title="Clique para ver o cálculo detalhado da média"
             >
-              <div className="flex flex-col cursor-help">
-                <Text type="secondary" className="text-xs mb-2">
-                  Média dos Individuais*
-                </Text>
-                <Text code className="text-base hover:text-blue-500">
-                  {avgTemperatura}
-                </Text>
-              </div>
-            </Tooltip>
+              <Text type="secondary" className="text-xs mb-2">
+                Média dos Individuais*
+              </Text>
+              <Text code className="text-base hover:text-blue-500">
+                {avgTemperatura}
+              </Text>
+            </div>
 
             <div className="flex flex-col">
               <Text type="secondary" className="text-xs mb-2">
@@ -194,7 +243,7 @@ export const GeralSummaryComponent = ({
           <SliderWithAverageMarker
             value={geralTemperatura}
             averageValue={avgTemperatura}
-            onChange={(value) => onGeralChange('temperatura', value)}
+            onChange={handleTemperaturaChange}
           />
         </div>
 
@@ -213,46 +262,17 @@ export const GeralSummaryComponent = ({
               </Tag>
             </div>
 
-            <Tooltip
-              title={
-                <div className="text-xs space-y-1">
-                  <div className="font-semibold mb-2">
-                    Cálculo da Média Individual
-                  </div>
-                  {analysisData.intensidade &&
-                    Object.entries(analysisData.intensidade).map(
-                      ([field, data]) => (
-                        <div key={field}>
-                          {
-                            COLOR_FIELDS.find((f) => f.value === field)
-                              ?.label
-                          }
-                          : {data.temperature}
-                        </div>
-                      )
-                    )}
-                  <div className="border-t border-gray-400 pt-1 mt-2 font-semibold">
-                    Total:{' '}
-                    {Object.values(analysisData.intensidade || {}).reduce(
-                      (sum, d) => sum + (d.temperature ?? 0),
-                      0
-                    )}{' '}
-                    ÷ {Object.keys(analysisData.intensidade || {}).length} ={' '}
-                    {avgIntensidade}
-                  </div>
-                </div>
-              }
-              color="#fff"
+            <div 
+              className="flex flex-col cursor-help"
+              title="Clique para ver o cálculo detalhado da média"
             >
-              <div className="flex flex-col cursor-help">
-                <Text type="secondary" className="text-xs mb-2">
-                  Média dos Individuais*
-                </Text>
-                <Text code className="text-base hover:text-blue-500">
-                  {avgIntensidade}
-                </Text>
-              </div>
-            </Tooltip>
+              <Text type="secondary" className="text-xs mb-2">
+                Média dos Individuais*
+              </Text>
+              <Text code className="text-base hover:text-blue-500">
+                {avgIntensidade}
+              </Text>
+            </div>
 
             <div className="flex flex-col">
               <Text type="secondary" className="text-xs mb-2">
@@ -267,7 +287,7 @@ export const GeralSummaryComponent = ({
           <SliderWithAverageMarker
             value={geralIntensidade}
             averageValue={avgIntensidade}
-            onChange={(value) => onGeralChange('intensidade', value)}
+            onChange={handleIntensidadeChange}
           />
         </div>
 
@@ -286,40 +306,17 @@ export const GeralSummaryComponent = ({
               </Tag>
             </div>
 
-            <Tooltip
-              title={
-                <div className="text-xs space-y-1">
-                  <div className="font-semibold mb-2">
-                    Cálculo da Média Individual
-                  </div>
-                  {analysisData.profundidade &&
-                    analysisData.profundidade.map((comparison, idx) => (
-                      <div key={idx}>
-                        {comparison.name}: {comparison.value}
-                      </div>
-                    ))}
-                  <div className="border-t border-gray-400 pt-1 mt-2 font-semibold">
-                    Total:{' '}
-                    {analysisData.profundidade?.reduce(
-                      (sum, p) => sum + (p.value ?? 0),
-                      0
-                    ) || 0}{' '}
-                    ÷ {analysisData.profundidade?.length || 1} ={' '}
-                    {avgProfundidade}
-                  </div>
-                </div>
-              }
-              color="#fff"
+            <div 
+              className="flex flex-col cursor-help"
+              title="Clique para ver o cálculo detalhado da média"
             >
-              <div className="flex flex-col cursor-help">
-                <Text type="secondary" className="text-xs mb-2">
-                  Média dos Individuais*
-                </Text>
-                <Text code className="text-base hover:text-blue-500">
-                  {avgProfundidade}
-                </Text>
-              </div>
-            </Tooltip>
+              <Text type="secondary" className="text-xs mb-2">
+                Média dos Individuais*
+              </Text>
+              <Text code className="text-base hover:text-blue-500">
+                {avgProfundidade}
+              </Text>
+            </div>
 
             <div className="flex flex-col">
               <Text type="secondary" className="text-xs mb-2">
@@ -334,7 +331,7 @@ export const GeralSummaryComponent = ({
           <SliderWithAverageMarker
             value={geralProfundidade}
             averageValue={avgProfundidade}
-            onChange={(value) => onGeralChange('profundidade', value)}
+            onChange={handleProfundidadeChange}
           />
         </div>
       </div>
