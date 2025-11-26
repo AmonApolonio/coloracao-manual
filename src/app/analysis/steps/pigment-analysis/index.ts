@@ -1,0 +1,6 @@
+export { default as PigmentAnalysisStep } from './PigmentAnalysisStep'
+export { SliderStepComponent } from './components/SliderStepComponent'
+export { ProfundidadeComparisonComponent } from './components/ProfundidadeComparisonComponent'
+export { GeralSummaryComponent } from './components/GeralSummaryComponent'
+export { ComparisonRowComponent } from './components/ComparisonRowComponent'
+export { SliderWithAverageMarker } from './components/SliderWithAverageMarker'

@@ -2,30 +2,22 @@
 
 import { useState } from 'react'
 import { Slider, Tag, Tooltip, Typography } from 'antd'
-import { hexToRgb, rgbToHsl, getColorProperties } from '../utils/colorConversion'
-import { COLOR_FIELDS, getLabelColor } from '../utils/PigmentAnalysisUtils'
+import { ProfundidadeComparisonUI } from '@/lib/types-ui'
+import { hexToRgb, rgbToHsl, getColorProperties } from '../../shared/colorConversion'
+import { COLOR_FIELDS, getLabelColor } from '../../shared/PigmentAnalysisUtils'
 
 const { Text } = Typography
 
-interface ComparisonItem {
-  name: string
-  colors1: string[]
-  colors2: string[]
-  value: number | null
-  category: string
-}
-
-interface ComparisonRowComponentProps {
-  title: string
-  stepKey: string
+interface ProfundidadeComparisonComponentProps {
   extractedColors: { [key: string]: string }
-  data: ComparisonItem[]
+  data: ProfundidadeComparisonUI[]
   onComparisonChange: (index: number, value: number) => void
 }
 
 const getDesaturatedColor = (hex: string): string => {
   const rgb = hexToRgb(hex)
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b)
+  // Return grayscale by setting saturation to 0
   return `hsl(${hsl.h}, 0%, ${hsl.l}%)`
 }
 
@@ -110,13 +102,11 @@ const renderColorGroup = (
   )
 }
 
-export const ComparisonRowComponent = ({
-  title,
-  stepKey,
+export const ProfundidadeComparisonComponent = ({
   extractedColors,
   data,
   onComparisonChange,
-}: ComparisonRowComponentProps) => {
+}: ProfundidadeComparisonComponentProps) => {
   const [hoveredColor, setHoveredColor] = useState<string | null>(null)
 
   return (
@@ -131,6 +121,7 @@ export const ComparisonRowComponent = ({
           extractedColors
         )
 
+        // Use division for ratio: target/reference (Group2/Group1)
         const hsvContrast =
           group1Props.hsv !== 0
             ? (group2Props.hsv / group1Props.hsv).toFixed(2)
@@ -204,17 +195,20 @@ export const ComparisonRowComponent = ({
                   {comparison.name}
                 </Text>
                 <Tag
-                  color={getLabelColor(comparison.value, stepKey)}
+                  color={getLabelColor(
+                    comparison.value,
+                    'profundidade'
+                  )}
                   className="text-white font-semibold px-3 py-1 text-xs mt-2 w-fit"
                 >
                   {comparison.category}
                 </Tag>
               </div>
 
-              {/* Value Column */}
+              {/* Profundidade Value Column */}
               <div className="flex flex-col">
                 <Text type="secondary" className="text-xs mb-2">
-                  {title}
+                  Profundidade
                 </Text>
                 <Text code className="text-base">
                   {comparison.value ?? '—'}

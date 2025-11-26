@@ -179,7 +179,7 @@ export function getSeasonColors(season: Season, variant: SeasonVariant): string[
     INVERNO_FRIO_COLORS,
     INVERNO_BRILHANTE_COLORS,
     INVERNO_ESCURO_COLORS,
-  } = require('../constants/maskAnalysisColors')
+  } = require('../mask-analysis/constants/maskAnalysisColors')
 
   const colorMap: Record<ColorSeason, string[]> = {
     'Primavera Brilhante': PRIMAVERA_BRILHANTE_COLORS,

@@ -3,9 +3,9 @@
 import { useCallback } from 'react'
 import { Tag, Tooltip, Typography } from 'antd'
 import { PigmentTemperatureDataUI, ProfundidadeComparisonUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
-import { hexToRgb, rgbToHsl } from '../utils/colorConversion'
-import { getLabelColor, getLabelCategory, COLOR_FIELDS } from '../utils/PigmentAnalysisUtils'
-import { detectSeasonFromSliders } from '../utils/seasonDetection'
+import { hexToRgb, rgbToHsl } from '../../shared/colorConversion'
+import { getLabelColor, getLabelCategory, COLOR_FIELDS } from '../../shared/PigmentAnalysisUtils'
+import { detectSeasonFromSliders } from '../../shared/seasonDetection'
 import { SliderWithAverageMarker } from './SliderWithAverageMarker'
 
 const { Text } = Typography

@@ -5,7 +5,7 @@ import { Card } from 'antd'
 import MaskCanvas from './MaskCanvas'
 import { MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
 import { PROFUNDIDADE_ESCURA_COLORS, PROFUNDIDADE_CLARA_COLORS, TEMPERATURA_FRIA_COLORS, TEMPERATURA_QUENTE_COLORS, INTENSIDADE_SUAVE_COLORS, INTENSIDADE_BRILHANTE_COLORS, PROFUNDIDADE_ESCURA_COLORS2, PROFUNDIDADE_CLARA_COLORS2, TEMPERATURA_FRIA_COLORS2, TEMPERATURA_QUENTE_COLORS2, OURO_GRADIENT, PRATA_GRADIENT, type GradientConfig } from './constants/maskAnalysisColors'
-import { detectSeason, getSeasonVariants, getSeasonColors } from './utils/seasonDetection'
+import { detectSeason, getSeasonVariants, getSeasonColors } from '../shared/seasonDetection'
 import { getColorSeason } from '@/lib/types'
 
 // Helper function to parse markdown bold syntax and render with JSX

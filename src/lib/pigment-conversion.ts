@@ -1,6 +1,6 @@
 import { PigmentAnalysisDataDB, ColorField, ComparisonField, COMPARISON_FIELD_NAMES } from './types-db'
 import { PigmentAnalysisDataUI, PigmentTemperatureDataUI, ProfundidadeComparisonUI } from './types-ui'
-import { getLabelCategory } from '../app/analysis/steps/utils/PigmentAnalysisUtils'
+import { getLabelCategory } from '../app/analysis/steps/shared/PigmentAnalysisUtils'
 
 /**
  * Convert DB format (numeric only) to UI format (with calculated properties)

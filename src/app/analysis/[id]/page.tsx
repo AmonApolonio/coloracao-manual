@@ -7,9 +7,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { User, Analysis, AnalysisStatus, SVGVectorData } from '@/lib/types'
 import { PigmentAnalysisDataDB, MaskAnalysisDataDB } from '@/lib/types-db'
-import InteractiveColorExtractionStep, { type InteractiveColorExtractionStepHandle } from '../steps/InteractiveColorExtractionStep'
-import PigmentAnalysisStep from '../steps/PigmentAnalysisStep'
-import MaskAnalysisStep from '../steps/MaskAnalysisStep'
+import InteractiveColorExtractionStep, { type InteractiveColorExtractionStepHandle } from '../steps/color-extraction/InteractiveColorExtractionStep'
+import PigmentAnalysisStep from '../steps/pigment-analysis/PigmentAnalysisStep'
+import MaskAnalysisStep from '../steps/mask-analysis/MaskAnalysisStep'
 
 const { Content } = Layout
 

@@ -2,8 +2,8 @@
 
 import { Slider, Tag, Typography } from 'antd'
 import { PigmentTemperatureDataUI } from '@/lib/types-ui'
-import { hexToRgb, rgbToHsl, getColorProperties } from '../utils/colorConversion'
-import { COLOR_FIELDS, getLabelColor } from '../utils/PigmentAnalysisUtils'
+import { hexToRgb, rgbToHsl, getColorProperties } from '../../shared/colorConversion'
+import { COLOR_FIELDS, getLabelColor } from '../../shared/PigmentAnalysisUtils'
 
 const { Text } = Typography
 
