@@ -3,10 +3,11 @@
 import { RefObject } from 'react'
 import { Card, Spin } from 'antd'
 import { User, Analysis, SVGVectorData } from '@/lib/types'
-import { PigmentAnalysisDataDB, MaskAnalysisDataDB } from '@/lib/types-db'
+import { PigmentAnalysisDataDB, MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
 import InteractiveColorExtractionStep, { type InteractiveColorExtractionStepHandle } from '../../steps/color-extraction/InteractiveColorExtractionStep'
 import PigmentAnalysisStep from '../../steps/pigment-analysis/PigmentAnalysisStep'
 import MaskAnalysisStep from '../../steps/mask-analysis/MaskAnalysisStep'
+import { FinalClassificationStep } from '../../steps/final-classification'
 
 interface StepContentProps {
   currentStep: number
@@ -16,11 +17,14 @@ interface StepContentProps {
   colorExtractionRef: RefObject<InteractiveColorExtractionStepHandle | null>
   pigmentAnalysisData: PigmentAnalysisDataDB | null
   maskAnalysisData: MaskAnalysisDataDB | null
+  extractedColors: { [key: string]: string }
+  selectedColorSeason: ColorSeason | null | undefined
   onColorDataChange: (svgVectorData: SVGVectorData) => void
   onSaveColorExtraction: (svgVectorData: any) => Promise<void>
   onPigmentDataChange: (data: PigmentAnalysisDataDB) => void
   onMaskAnalysisDataChange: (data: MaskAnalysisDataDB) => void
   onSubStepChange: (subStep: number) => void
+  onColorSeasonChange: (season: ColorSeason) => void
 }
 
 export function StepContent({
@@ -31,11 +35,14 @@ export function StepContent({
   colorExtractionRef,
   pigmentAnalysisData,
   maskAnalysisData,
+  extractedColors,
+  selectedColorSeason,
   onColorDataChange,
   onSaveColorExtraction,
   onPigmentDataChange,
   onMaskAnalysisDataChange,
   onSubStepChange,
+  onColorSeasonChange,
 }: StepContentProps) {
   return (
     <div className="relative">
@@ -76,12 +83,15 @@ export function StepContent({
       )}
 
       {currentStep === 6 && (
-        <Card className="border-secondary border-2">
-          <h2 className="text-xl font-bold text-secondary mb-4">Classificação Final</h2>
-          <div className="text-center py-12 text-gray-400">
-            <p>Próximas etapas em desenvolvimento...</p>
-          </div>
-        </Card>
+        <FinalClassificationStep
+          initialData={analysis.extracao as SVGVectorData}
+          userFacePhotoUrl={user.face_photo_url || undefined}
+          pigmentAnalysisData={pigmentAnalysisData || undefined}
+          maskAnalysisData={maskAnalysisData || undefined}
+          extractedColors={extractedColors}
+          selectedColorSeason={selectedColorSeason}
+          onColorSeasonChange={onColorSeasonChange}
+        />
       )}
     </div>
   )

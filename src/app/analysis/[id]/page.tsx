@@ -1,7 +1,8 @@
 'use client'
 
-import { use, useRef } from 'react'
+import { use, useRef, useState } from 'react'
 import { Layout, Card, Spin } from 'antd'
+import { ColorSeason } from '@/lib/types-db'
 import { type InteractiveColorExtractionStepHandle } from '../steps/color-extraction/InteractiveColorExtractionStep'
 import { useAnalysisData, useAnalysisSave } from './hooks'
 import { AnalysisHeader, StepContent } from './components'
@@ -12,6 +13,7 @@ const { Content } = Layout
 export default function AnalysisPage({ params }: AnalysisPageProps) {
   const { id: analysisId } = use(params)
   const colorExtractionRef = useRef<InteractiveColorExtractionStepHandle>(null)
+  const [selectedColorSeason, setSelectedColorSeason] = useState<ColorSeason | null>(null)
 
   // Load and manage analysis data
   const {
@@ -31,6 +33,11 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     handleMaskAnalysisDataChange,
   } = useAnalysisData(analysisId)
 
+  // Initialize selected color season from analysis if available
+  if (analysis?.color_season && !selectedColorSeason) {
+    setSelectedColorSeason(analysis.color_season)
+  }
+
   // Save operations
   const {
     saving,
@@ -45,6 +52,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     setCurrentStep,
     pigmentAnalysisData,
     maskAnalysisData,
+    colorSeason: selectedColorSeason,
   })
 
   if (loading) {
@@ -82,6 +90,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
           extractedColors={extractedColors}
           pigmentAnalysisData={pigmentAnalysisData}
           maskAnalysisData={maskAnalysisData}
+          selectedColorSeason={selectedColorSeason}
           colorExtractionRef={colorExtractionRef}
           onSaveColorExtraction={handleSaveColorExtractionStep}
           onSaveOtherStep={handleSaveOtherStep}
@@ -96,6 +105,8 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
             saving={saving}
             user={user}
             analysis={analysis}
+            extractedColors={extractedColors}
+            selectedColorSeason={selectedColorSeason}
             colorExtractionRef={colorExtractionRef}
             pigmentAnalysisData={pigmentAnalysisData}
             maskAnalysisData={maskAnalysisData}
@@ -103,6 +114,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
             onSaveColorExtraction={handleSaveColorExtractionStep}
             onPigmentDataChange={handlePigmentDataChange}
             onMaskAnalysisDataChange={handleMaskAnalysisDataChange}
+            onColorSeasonChange={setSelectedColorSeason}
             onSubStepChange={(subStep: number) => setCurrentStep(subStep + 2)}
           />
         </div>

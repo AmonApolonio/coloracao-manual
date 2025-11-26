@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
 import { supabase } from '@/lib/supabase'
 import { Analysis, AnalysisStatus } from '@/lib/types'
-import { PigmentAnalysisDataDB, MaskAnalysisDataDB } from '@/lib/types-db'
+import { PigmentAnalysisDataDB, MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
 import { TOTAL_STEPS } from '../constants'
 
 interface UseAnalysisSaveProps {
@@ -15,6 +15,7 @@ interface UseAnalysisSaveProps {
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>
   pigmentAnalysisData: PigmentAnalysisDataDB | null
   maskAnalysisData: MaskAnalysisDataDB | null
+  colorSeason?: ColorSeason | null
 }
 
 interface UseAnalysisSaveReturn {
@@ -22,7 +23,7 @@ interface UseAnalysisSaveReturn {
   handleSaveColorExtractionStep: (svgVectorData: any) => Promise<void>
   handleSaveOtherStep: () => Promise<void>
   handleSaveAndExit: (svgVectorData: any) => Promise<void>
-  handleCompleteAnalysis: () => Promise<void>
+  handleCompleteAnalysis: (colorSeason?: ColorSeason | null) => Promise<void>
 }
 
 /**
@@ -55,6 +56,7 @@ export function useAnalysisSave({
   setCurrentStep,
   pigmentAnalysisData,
   maskAnalysisData,
+  colorSeason,
 }: UseAnalysisSaveProps): UseAnalysisSaveReturn {
   const router = useRouter()
   const { message } = AntdApp.useApp()
@@ -129,6 +131,15 @@ export function useAnalysisSave({
         updatePayload.analise_pigmentos = mergedData
       }
 
+      // Save color_season if we're in final classification step (6) - but don't change status
+      if (currentStep === 6 && colorSeason) {
+        updatePayload.color_season = colorSeason
+        // Don't advance to next step for final step
+        delete updatePayload.current_step
+        // Keep status as in_process (not changing it)
+        delete updatePayload.status
+      }
+
       const { error } = await supabase
         .from('analyses')
         .update(updatePayload)
@@ -141,12 +152,13 @@ export function useAnalysisSave({
 
       setAnalysis({
         ...analysis,
-        current_step: currentStep + 1,
+        current_step: currentStep === 6 ? currentStep : currentStep + 1,
         status: 'in_process',
+        color_season: colorSeason || null,
         analise_pigmentos: updatePayload.analise_pigmentos,
       })
 
-      if (currentStep < TOTAL_STEPS - 1) {
+      if (currentStep < TOTAL_STEPS - 1 && currentStep !== 6) {
         setCurrentStep(currentStep + 1)
       }
 
@@ -207,20 +219,27 @@ export function useAnalysisSave({
   }
 
   // Complete analysis handler
-  const handleCompleteAnalysis = async () => {
+  const handleCompleteAnalysis = async (finalColorSeason?: ColorSeason | null) => {
     if (!analysis) return
 
     try {
       setSaving(true)
 
+      const updatePayload: any = {
+        status: 'completed' as AnalysisStatus,
+        current_step: 7,
+        analyzed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      // Save the final color_season if provided
+      if (finalColorSeason) {
+        updatePayload.color_season = finalColorSeason
+      }
+
       const { error } = await supabase
         .from('analyses')
-        .update({
-          status: 'completed' as AnalysisStatus,
-          current_step: 6,
-          analyzed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', analysis.id)
 
       if (error) throw error

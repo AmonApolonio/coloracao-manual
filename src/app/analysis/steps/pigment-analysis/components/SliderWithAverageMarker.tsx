@@ -6,7 +6,8 @@ import { Slider } from 'antd'
 interface SliderWithAverageMarkerProps {
   value: number | null
   averageValue: number | null
-  onChange: (value: number) => void
+  onChange?: (value: number) => void
+  disabled?: boolean
   min?: number
   max?: number
   step?: number
@@ -15,7 +16,8 @@ interface SliderWithAverageMarkerProps {
 export const SliderWithAverageMarker = memo(({
   value,
   averageValue,
-  onChange,
+  onChange = () => {},
+  disabled = false,
   min = 0,
   max = 100,
   step = 1,
@@ -50,6 +52,7 @@ export const SliderWithAverageMarker = memo(({
   return (
     <div className="relative">
       <Slider
+        disabled={disabled}
         min={min}
         max={max}
         step={step}

@@ -6,7 +6,7 @@ import { ArrowLeftOutlined, ArrowRightOutlined, SaveOutlined } from '@ant-design
 import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
 import { User, Analysis } from '@/lib/types'
-import { PigmentAnalysisDataDB, MaskAnalysisDataDB } from '@/lib/types-db'
+import { PigmentAnalysisDataDB, MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
 import { type InteractiveColorExtractionStepHandle } from '../../steps/color-extraction/InteractiveColorExtractionStep'
 import { MAIN_ANALYSIS_STEPS, PIGMENT_SUB_STEPS, TOTAL_STEPS } from '../constants'
 import {
@@ -26,11 +26,12 @@ interface AnalysisHeaderProps {
   extractedColors: { [key: string]: string }
   pigmentAnalysisData: PigmentAnalysisDataDB | null
   maskAnalysisData: MaskAnalysisDataDB | null
+  selectedColorSeason?: ColorSeason | null
   colorExtractionRef: RefObject<InteractiveColorExtractionStepHandle | null>
   onSaveColorExtraction: (svgVectorData: any) => Promise<void>
   onSaveOtherStep: () => Promise<void>
   onSaveAndExit: (svgVectorData: any) => Promise<void>
-  onCompleteAnalysis: () => Promise<void>
+  onCompleteAnalysis: (colorSeason?: ColorSeason | null) => Promise<void>
 }
 
 export function AnalysisHeader({
@@ -44,6 +45,7 @@ export function AnalysisHeader({
   extractedColors,
   pigmentAnalysisData,
   maskAnalysisData,
+  selectedColorSeason,
   colorExtractionRef,
   onSaveColorExtraction,
   onSaveOtherStep,
@@ -248,7 +250,7 @@ export function AnalysisHeader({
                 size={isScrolled ? 'small' : 'middle'}
                 icon={<SaveOutlined />}
                 loading={saving}
-                onClick={onCompleteAnalysis}
+                onClick={() => onCompleteAnalysis(selectedColorSeason)}
               >
                 {isScrolled ? '' : 'Concluir'}
               </Button>
