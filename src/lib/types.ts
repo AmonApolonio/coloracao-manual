@@ -1,8 +1,11 @@
 // ========== RE-EXPORTS FROM SEPARATE TYPE FILES ==========
 
+// Season types
+export type { Season, SeasonVariant, ColorSeason } from './types-season'
+export { SEASON_VARIANTS, getColorSeason, getSeasonFromColorSeason, getVariantFromColorSeason } from './types-season'
+
 // Core and database types
 export type {
-  ColorSeason,
   AnalysisStatus,
   ColorField,
   SVGVector,

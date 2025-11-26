@@ -4,21 +4,12 @@
  * containing only numeric values and no calculated properties
  */
 
+import { ColorSeason, Season, SeasonVariant } from './types-season'
+
 // ========== CORE TYPES ==========
 
-export type ColorSeason =
-  | 'Verão Frio'
-  | 'Verão Suave'
-  | 'Verão Claro'
-  | 'Inverno Frio'
-  | 'Inverno Brilhante'
-  | 'Inverno Escuro'
-  | 'Outono Quente'
-  | 'Outono Suave'
-  | 'Outono Escuro'
-  | 'Primavera Brilhante'
-  | 'Primavera Clara'
-  | 'Primavera Quente';
+// Re-export season types for backward compatibility
+export type { Season, SeasonVariant, ColorSeason }
 
 export type AnalysisStatus = 'not_started' | 'in_process' | 'completed';
 
@@ -53,6 +44,21 @@ export interface PigmentAnalysisDataDB {
   };
 }
 
+// ========== MASK ANALYSIS DATABASE TYPES ==========
+
+export interface MaskAnalysisDataDB {
+  temperatura: 'fria' | 'quente' | null;
+  intensidade: 'suave' | 'brilhante' | null;
+  profundidade: 'escura' | 'clara' | null;
+  subtom: 'ouro' | 'prata' | null;
+  colorSeason?: ColorSeason | null;
+  facePosition: {
+    x: number;
+    y: number;
+    scale: number;
+  };
+}
+
 // ========== CORE DATABASE MODELS ==========
 
 export interface User {
@@ -72,6 +78,7 @@ export interface Analysis {
   current_step: number;
   extracao?: SVGVectorData;
   analise_pigmentos?: PigmentAnalysisDataDB;
+  analise_mascaras?: MaskAnalysisDataDB;
   analyzed_at: string | null;
   created_at: string;
   updated_at: string;

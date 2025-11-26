@@ -1,0 +1,567 @@
+/**
+ * Color constants for Mask Analysis step
+ * Ray colors for different profundidade (depth) options
+ */
+
+export const PROFUNDIDADE_ESCURA_COLORS = [
+  '#42394a',
+  '#292931',
+  '#312118',
+  '#423121',
+  '#293931',
+  '#314a84',
+  '#212131',
+  '#203173',
+  '#421831',
+  '#7b2121',
+  '#632052',
+  '#bd3a5a',
+  '#311829',
+  '#732118',
+  '#4a3121',
+  '#18100f',
+];
+
+export const PROFUNDIDADE_CLARA_COLORS = [
+  '#b5adbd',
+  '#94849c',
+  '#efdebd',
+  '#e7b59c',
+  '#ded65a',
+  '#4a7b63',
+  '#84bdc6',
+  '#5a8cce',
+  '#84b5e7',
+  '#a57bbd',
+  '#e7add6',
+  '#de7bad',
+  '#e7948c',
+  '#e794a5',
+  '#d6b563',
+  '#a5735a',
+];
+
+export const TEMPERATURA_FRIA_COLORS = [
+  '#372d2d',
+  '#373746',
+  '#a59baa',
+  '#508c9b',
+  '#417369',
+  '#375f82',
+  '#28465f',
+  '#1e3769',
+  '#371e37',
+  '#8c375a',
+  '#5f1e41',
+  '#c3285a',
+  '#825fa5',
+  '#411e50',
+  '#5a82c3',
+  '#282d78',
+];
+
+export const TEMPERATURA_QUENTE_COLORS = [
+  '#414628',
+  '#919b37',
+  '#dcb469',
+  '#e6b941',
+  '#b4782d',
+  '#2d1414',
+  '#466937',
+  '#466937',
+  '#c36937',
+  '#c3502d',
+  '#e6d246',
+  '#b92d28',
+  '#69a55a',
+  '#508c41',
+  '#1e1e28',
+  '#732814',
+  '#2d4146',
+];
+
+export const INTENSIDADE_SUAVE_COLORS = [
+  '#a58278',
+  '#b4825a',
+  '#5f372d',
+  '#5a4146',
+  '#37462d',
+  '#147350',
+  '#5aaac3',
+  '#2d7391',
+  '#37375a',
+  '#505a8c',
+  '#a582a5',
+  '#82698c',
+  '#502d50',
+  '#5f2837',
+  '#733750',
+  '#5a4141',
+];
+
+export const INTENSIDADE_BRILHANTE_COLORS = [
+  '#691e0f',
+  '#aa2d28',
+  '#c37346',
+  '#d2d241',
+  '#dcdcdc',
+  '#14140f',
+  '#468237',
+  '#1e418c',
+  '#d2cd41',
+  '#280f46',
+  '#371e5f',
+  '#a51450',
+  '#141446',
+  '#410541',
+  '#aa281e',
+  '#28371e',
+];
+
+export const TEMPERATURA_FRIA_COLORS2 = [
+  '#aa6973',
+  '#b9738c',
+  '#b98291',
+  '#b9919b',
+  '#9b7369',
+  '#a57369',
+  '#c3919b',
+  '#dcc3b9',
+  '#826969',
+  '#826969',
+  '#8c7373',
+  '#695050',
+  '#463741',
+  '#413741',
+  '#463741',
+  '#463737',
+];
+
+export const TEMPERATURA_QUENTE_COLORS2 = [
+  '#693737',
+  '#734141',
+  '#734641',
+  '#693728',
+  '#411e1e',
+  '#462d2d',
+  '#46282d',
+  '#462828',
+  '#73371e',
+  '#915a37',
+  '#b49169',
+  '#b9aa73',
+  '#b48c5f',
+  '#c39b78',
+  '#dcb9a5',
+  '#d29b82',
+];
+
+export const PROFUNDIDADE_ESCURA_COLORS2 = [
+  '#3c3c3c',
+  '#282828',
+  '#232323',
+  '#323232',
+  '#323232',
+  '#4b4b4b',
+  '#232323',
+  '#373737',
+  '#282828',
+  '#464646',
+  '#3c3c3c',
+  '#6e6e6e',
+  '#1e1e1e',
+  '#414141',
+  '#373737',
+  '#0f0f0f',
+];
+
+export const PROFUNDIDADE_CLARA_COLORS2 = [
+  '#afafaf',
+  '#878787',
+  '#dcdcdc',
+  '#bebebe',
+  '#cdcdcd',
+  '#6e6e6e',
+  '#afafaf',
+  '#878787',
+  '#afafaf',
+  '#8c8c8c',
+  '#8c8c8c',
+  '#bebebe',
+  '#a0a0a0',
+  '#aaaaaa',
+  '#afafaf',
+  '#b9b9b9',
+];
+
+export const DEFAULT_RAY_COLORS = [
+  '#E8C8A8', // Light beige
+  '#D9A17E', // Tan
+  '#A8B8D8', // Lavender
+  '#8FA8D8', // Periwinkle
+  '#A8D8B8', // Mint
+  '#D8C8A8', // Sandy beige
+  '#E8B8A8', // Salmon
+  '#D8A8D8', // Mauve
+  '#C8D8A8', // Pale yellow
+  '#98C8A8', // Sage
+  '#D8A888', // Terracotta
+  '#88B8D8', // Sky blue
+  '#D8B8D8', // Light purple
+  '#B8D8A8', // Light green
+  '#D8A8B8', // Rose
+  '#A8C8D8', // Steel blue
+];
+
+// Gradient definitions for Ouro (Gold) and Prata (Silver) backgrounds
+export const OURO_GRADIENT = {
+  type: 'linear' as const,
+  colorStops: [
+    { offset: 0, color: '#BF953F' },    // Dark gold
+    { offset: 0.25, color: '#FCF6BA' }, // Light gold
+    { offset: 0.5, color: '#D4AF37' },  // Classic gold
+    { offset: 0.75, color: '#FBF5B7' }, // Bright gold
+    { offset: 1, color: '#AA771C' },    // Bronze gold
+  ],
+};
+
+export const PRATA_GRADIENT = {
+  type: 'linear' as const,
+  colorStops: [
+    { offset: 0, color: '#C0C0C0' },    // Silver
+    { offset: 0.25, color: '#E8E8E8' }, // Light silver
+    { offset: 0.5, color: '#A8A8A8' },  // Medium silver
+    { offset: 0.75, color: '#D8D8D8' }, // Bright silver
+    { offset: 1, color: '#808080' },    // Dark silver
+  ],
+};
+
+export type GradientConfig = typeof OURO_GRADIENT | typeof PRATA_GRADIENT;
+
+// ========== SEASON COLOR PALETTES (Mock Colors) ==========
+// These will be replaced with actual colors later
+
+export const PRIMAVERA_BRILHANTE_COLORS = [
+  '#9150b4',
+  '#69288c',
+  '#2850b4',
+  '#375f78',
+  '#509bb4',
+  '#50b446',
+  '#b4e6e6',
+  '#9bc314',
+  '#dceb69',
+  '#f55f50',
+  '#aa411e',
+  '#285f37',
+  '#ffe6cd',
+  '#ebcd46',
+  '#fff5a5',
+  '#d2eb5f',
+  '#f5eb46',
+  '#ff8c46',
+  '#e63728',
+  '#eb375a',
+  '#e61473',
+  '#eb5fa5',
+  '#dc378c',
+  '#cdc3f5',
+];
+
+export const PRIMAVERA_CLARA_COLORS = [
+  '#cdcdaa',
+  '#e6d2b9',
+  '#d2b491',
+  '#eba591',
+  '#d2aa8c',
+  '#aa9b9b',
+  '#e6a58c',
+  '#e691aa',
+  '#5fa5eb',
+  '#78d2e6',
+  '#73d2c3',
+  '#5fb45a',
+  '#cdc3c3',
+  '#ebc378',
+  '#e6c373',
+  '#ebb9b9',
+  '#eb9baa',
+  '#8ccd78',
+  '#69cdb9',
+  '#82b9eb',
+  '#f5a5b9',
+  '#9191dc',
+  '#7391dc',
+  '#e6d25f',
+];
+
+export const PRIMAVERA_QUENTE_COLORS = [
+  '#28b4b4',
+  '#50c3aa',
+  '#91aaeb',
+  '#785ab4',
+  '#dc2837',
+  '#cd8c5f',
+  '#eb5f50',
+  '#5f4637',
+  '#dc9b37',
+  '#dcaa41',
+  '#ebb48c',
+  '#eb9182',
+  '#5f2d2d',
+  '#782d2d',
+  '#e64669',
+  '#d21e46',
+  '#dcb973',
+  '#f5d29b',
+  '#dcd291',
+  '#c3d25f',
+  '#78911e',
+  '#50b946',
+  '#14822d',
+  '#2da59b',
+];
+
+export const OUTONO_QUENTE_COLORS = [
+  '#aa2d41',
+  '#50372d',
+  '#ff8c73',
+  '#dc5f46',
+  '#dc8250',
+  '#f5b95f',
+  '#41b9c3',
+  '#82aa5f',
+  '#145f78',
+  '#287350',
+  '#2d692d',
+  '#1e3737',
+  '#ebb95f',
+  '#b4b478',
+  '#918c37',
+  '#91915f',
+  '#b9b478',
+  '#787378',
+  '#c3c3b4',
+  '#d2a550',
+  '#915a37',
+  '#aa5a5a',
+  '#dc9178',
+  '#cdaa8c',
+];
+
+export const OUTONO_SUAVE_COLORS = [
+  '#827882',
+  '#82695f',
+  '#cd5f73',
+  '#8c8c78',
+  '#5a5a69',
+  '#5a9ba5',
+  '#78c3c3',
+  '#e6cd91',
+  '#d2cdb9',
+  '#eba5aa',
+  '#a5505f',
+  '#b4a573',
+  '#ebcd9b',
+  '#ebdcaa',
+  '#919bcd',
+  '#78b4d2',
+  '#d2d2d2',
+  '#dc8282',
+  '#ffa5b9',
+  '#ffb9cd',
+  '#f5a5a5',
+  '#b9b49b',
+  '#919b8c',
+  '#b4aaa5',
+];
+
+export const OUTONO_ESCURO_COLORS = [
+  '#37aaaa',
+  '#46a5cd',
+  '#0f5a82',
+  '#14788c',
+  '#2d6973',
+  '#a5468c',
+  '#b92d46',
+  '#5f4114',
+  '#78142d',
+  '#781e5f',
+  '#5f4114',
+  '#9ba541',
+  '#b99b50',
+  '#dc5050',
+  '#e66973',
+  '#b42d41',
+  '#9b3737',
+  '#787378',
+  '#8c7373',
+  '#73732d',
+  '#2d2d14',
+  '#460f2d',
+  '#0f415f',
+  '#0f1446',
+];
+
+export const VERAO_FRIO_COLORS = [
+  '#698291',
+  '#0f73aa',
+  '#505a9b',
+  '#c36991',
+  '#a54178',
+  '#dc375f',
+  '#ffb4d2',
+  '#055f78',
+  '#005f50',
+  '#505a69',
+  '#052850',
+  '#502d46',
+  '#dc8caa',
+  '#9b9bb4',
+  '#b49baa',
+  '#eb698c',
+  '#dcd291',
+  '#e6dcaa',
+  '#5ab9b9',
+  '#41a5c3',
+  '#82b4eb',
+  '#8291d2',
+  '#5ab4eb',
+  '#0f468c',
+];
+
+export const VERAO_SUAVE_COLORS = [
+  '#aa4669',
+  '#8c5073',
+  '#82788c',
+  '#50789b',
+  '#8cb4cd',
+  '#5f8c91',
+  '#b4b9d2',
+  '#aaa5b9',
+  '#a5c3e6',
+  '#5a8291',
+  '#464150',
+  '#dc5f91',
+  '#ffa5cd',
+  '#ebb4b4',
+  '#ebdcb4',
+  '#dccd8c',
+  '#695f69',
+  '#c3b9b4',
+  '#5f698c',
+  '#ff829b',
+  '#78788c',
+  '#7878aa',
+  '#919bc3',
+  '#8278a5',
+];
+
+export const VERAO_CLARO_COLORS = [
+  '#827882',
+  '#82695f',
+  '#cd5f73',
+  '#8c8c78',
+  '#5a5a69',
+  '#5a9ba5',
+  '#78c3c3',
+  '#e6cd91',
+  '#d2cdb9',
+  '#eba5aa',
+  '#a5505f',
+  '#b4a573',
+  '#ebcd9b',
+  '#ebdcaa',
+  '#919bcd',
+  '#78b4d2',
+  '#d2d2d2',
+  '#dc8282',
+  '#ffa5b9',
+  '#ffb9cd',
+  '#f5a5a5',
+  '#b9b49b',
+  '#919b8c',
+  '#b4aaa5',
+];
+
+export const INVERNO_FRIO_COLORS = [
+  '#508cdc',
+  '#14469b',
+  '#41415a',
+  '#8c2d5f',
+  '#9b5ab4',
+  '#b93778',
+  '#f578b9',
+  '#e65faa',
+  '#e6415f',
+  '#73375f',
+  '#412841',
+  '#1e282d',
+  '#ffffff',
+  '#78c3ff',
+  '#ffffa5',
+  '#ffdcf5',
+  '#46b4d2',
+  '#9ba5aa',
+  '#2d8282',
+  '#1e5046',
+  '#46c3b9',
+  '#1e698c',
+  '#2873d2',
+  '#1e5fa5',
+];
+
+export const INVERNO_BRILHANTE_COLORS = [
+  '#5f005a',
+  '#820028',
+  '#c30069',
+  '#e641b9',
+  '#ff5073',
+  '#eb0f41',
+  '#cd001e',
+  '#c346c3',
+  '#690082',
+  '#007882',
+  '#00822d',
+  '#05051e',
+  '#ffffff',
+  '#cdcdd2',
+  '#d2d2ff',
+  '#0082eb',
+  '#505acd',
+  '#5faaff',
+  '#285ad2',
+  '#001e69',
+  '#0014b4',
+  '#1e0f91',
+  '#370050',
+  '#000050',
+];
+
+export const INVERNO_ESCURO_COLORS = [
+  '#9b2837',
+  '#b92d50',
+  '#782846',
+  '#8c375f',
+  '#28509b',
+  '#1e5f50',
+  '#287878',
+  '#1e2d5a',
+  '#1e3750',
+  '#1e4641',
+  '#0f0f0f',
+  '#371e28',
+  '#ffffff',
+  '#69a5e6',
+  '#2d82b4',
+  '#1e469b',
+  '#146978',
+  '#2d69aa',
+  '#462d5a',
+  '#825fa5',
+  '#cd4682',
+  '#e65078',
+  '#8c2d5f',
+  '#d282b4',
+];
+
