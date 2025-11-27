@@ -14,6 +14,7 @@ import {
   isNextButtonDisabled,
   getNextButtonTooltip,
 } from '../utils'
+import { PictureInPicture } from './PictureInPicture'
 
 interface AnalysisHeaderProps {
   user: User
@@ -60,6 +61,7 @@ export function AnalysisHeader({
   const [isScrolled, setIsScrolled] = useState(false)
   const [showExitModal, setShowExitModal] = useState(false)
   const [exitLoading, setExitLoading] = useState(false)
+  const [showPictureInPicture, setShowPictureInPicture] = useState(false)
 
   // Track scroll position
   useEffect(() => {
@@ -158,15 +160,25 @@ export function AnalysisHeader({
   const currentStepTitle = getFullStepTitle()
 
   return (
-    <header
-      className={`
-        sticky top-0 z-50 transition-all duration-300 ease-in-out w-full
-        ${isScrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-sm py-2'
-          : 'bg-transparent py-4'
-        }
-      `}
-    >
+    <>
+      {/* Picture-in-Picture floating window */}
+      {showPictureInPicture && user.face_photo_url && (
+        <PictureInPicture
+          imageUrl={user.face_photo_url}
+          alt={user.name}
+          onClose={() => setShowPictureInPicture(false)}
+        />
+      )}
+
+      <header
+        className={`
+          sticky top-0 z-50 transition-all duration-300 ease-in-out w-full
+          ${isScrolled
+            ? 'bg-white/95 backdrop-blur-md shadow-sm py-2'
+            : 'bg-transparent py-4'
+          }
+        `}
+      >
       {/* Exit Confirmation Modal */}
       <Modal
         title="Sair da Análise"
@@ -203,15 +215,19 @@ export function AnalysisHeader({
           />
           
           {user.face_photo_url && (
-            <img
-              src={user.face_photo_url}
-              alt={user.name}
-              className={`
-                rounded-full object-cover border-2 border-white shadow-md
-                transition-all duration-300
-                ${isScrolled ? 'w-8 h-8' : 'w-12 h-12'}
-              `}
-            />
+            <Tooltip title="Clique para abrir foto como referência" placement="bottom">
+              <img
+                src={user.face_photo_url}
+                alt={user.name}
+                onClick={() => setShowPictureInPicture(true)}
+                className={`
+                  rounded-full object-cover border-2 border-white shadow-md
+                  transition-all duration-300 cursor-pointer
+                  hover:ring-2 hover:ring-primary/50 hover:scale-105
+                  ${isScrolled ? 'w-8 h-8' : 'w-12 h-12'}
+                `}
+              />
+            </Tooltip>
           )}
           <div className={`min-w-0 transition-all duration-300 ${isScrolled ? 'hidden sm:block' : ''}`}>
             <h1 className={`
@@ -367,6 +383,7 @@ export function AnalysisHeader({
           </Space>
         </div>
       </div>
-    </header>
+      </header>
+    </>
   )
 }
