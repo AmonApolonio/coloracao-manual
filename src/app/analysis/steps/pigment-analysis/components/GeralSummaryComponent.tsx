@@ -27,6 +27,7 @@ interface GeralSummaryComponentProps {
     key: 'temperatura' | 'intensidade' | 'profundidade',
     value: number
   ) => void
+  isReadOnly?: boolean
 }
 
 const calculateAverageFromStep = (
@@ -64,6 +65,7 @@ export const GeralSummaryComponent = ({
   analysisData,
   userFacePhotoUrl,
   onGeralChange,
+  isReadOnly,
 }: GeralSummaryComponentProps) => {
   // Calculate averages from individual steps
   const avgTemperatura = calculateAverageFromStep(analysisData.temperatura)
@@ -244,6 +246,7 @@ export const GeralSummaryComponent = ({
             value={geralTemperatura}
             averageValue={avgTemperatura}
             onChange={handleTemperaturaChange}
+            disabled={isReadOnly}
           />
         </div>
 
@@ -288,6 +291,7 @@ export const GeralSummaryComponent = ({
             value={geralIntensidade}
             averageValue={avgIntensidade}
             onChange={handleIntensidadeChange}
+            disabled={isReadOnly}
           />
         </div>
 
@@ -332,6 +336,7 @@ export const GeralSummaryComponent = ({
             value={geralProfundidade}
             averageValue={avgProfundidade}
             onChange={handleProfundidadeChange}
+            disabled={isReadOnly}
           />
         </div>
       </div>

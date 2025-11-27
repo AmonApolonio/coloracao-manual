@@ -33,6 +33,9 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     handleMaskAnalysisDataChange,
   } = useAnalysisData(analysisId)
 
+  // Determine if analysis is read-only (completed status)
+  const isReadOnly = analysis?.status === 'completed'
+
   // Initialize selected color season from analysis if available
   if (analysis?.color_season && !selectedColorSeason) {
     setSelectedColorSeason(analysis.color_season)
@@ -53,6 +56,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     pigmentAnalysisData,
     maskAnalysisData,
     colorSeason: selectedColorSeason,
+    isReadOnly,
   })
 
   if (loading) {
@@ -96,6 +100,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
           onSaveOtherStep={handleSaveOtherStep}
           onSaveAndExit={handleSaveAndExit}
           onCompleteAnalysis={handleCompleteAnalysis}
+          isReadOnly={isReadOnly}
         />
 
         {/* Step Content */}
@@ -116,6 +121,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
             onMaskAnalysisDataChange={handleMaskAnalysisDataChange}
             onColorSeasonChange={setSelectedColorSeason}
             onSubStepChange={(subStep: number) => setCurrentStep(subStep + 2)}
+            isReadOnly={isReadOnly}
           />
         </div>
       </div>

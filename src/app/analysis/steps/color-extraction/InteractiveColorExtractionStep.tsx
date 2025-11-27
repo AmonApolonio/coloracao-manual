@@ -14,6 +14,7 @@ interface InteractiveColorExtractionStepProps {
   onSave: (data: SVGVectorData) => Promise<void>
   initialData?: SVGVectorData
   onDataChange?: (data: SVGVectorData) => void
+  isReadOnly?: boolean
 }
 
 export interface InteractiveColorExtractionStepHandle {
@@ -43,6 +44,7 @@ const InteractiveColorExtractionStepComponent = forwardRef<
       onSave,
       initialData,
       onDataChange,
+      isReadOnly,
     }: InteractiveColorExtractionStepProps,
     ref
   ) => {
@@ -231,7 +233,7 @@ const InteractiveColorExtractionStepComponent = forwardRef<
           setIsPanning(true)
           setPanStart({ x: pos.x - stagePos.x, y: pos.y - stagePos.y })
         }
-      } else {
+      } else if (!isReadOnly) {
         const stage = e.target.getStage()
         const pos = stage?.getPointerPosition()
         if (pos && stage && image) {
@@ -530,6 +532,7 @@ const InteractiveColorExtractionStepComponent = forwardRef<
                     value={brushSize}
                     onChange={e => setBrushSize(parseInt(e.target.value))}
                     className="flex-1 h-1.5"
+                    disabled={isReadOnly}
                   />
                   <span className="text-xs text-gray-500 w-6">{brushSize}px</span>
                 </div>
@@ -554,7 +557,7 @@ const InteractiveColorExtractionStepComponent = forwardRef<
                   <Button
                     size="small"
                     onClick={handleUndo}
-                    disabled={!currentVector}
+                    disabled={!currentVector || isReadOnly}
                     title="Desfazer traço"
                     icon={<UndoOutlined />}
                   />
@@ -562,19 +565,26 @@ const InteractiveColorExtractionStepComponent = forwardRef<
                     size="small"
                     danger
                     onClick={handleClear}
-                    disabled={currentStroke.length === 0}
+                    disabled={currentStroke.length === 0 || isReadOnly}
                     title="Limpar traço atual"
                     icon={<DeleteOutlined />}
                   />
                 </div>
               </div>
 
-              <div className="text-xs text-gray-500 mt-2">
-                💡 Segure <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-xs font-mono">
-                  Shift
-                </kbd>{' '}
-                + arraste para mover
-              </div>
+              {!isReadOnly && (
+                <div className="text-xs text-gray-500 mt-2">
+                  💡 Segure <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-xs font-mono">
+                    Shift
+                  </kbd>{' '}
+                  + arraste para mover
+                </div>
+              )}
+              {isReadOnly && (
+                <div className="text-xs text-amber-600 mt-2 bg-amber-50 px-3 py-2 rounded">
+                  🔒 Modo visualização - Esta análise já foi concluída
+                </div>
+              )}
             </div>
 
             {/* Right side - Color swatches */}

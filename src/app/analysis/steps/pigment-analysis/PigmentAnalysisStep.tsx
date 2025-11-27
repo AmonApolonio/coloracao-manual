@@ -17,9 +17,10 @@ interface PigmentAnalysisStepProps {
   initialData?: SVGVectorData
   userFacePhotoUrl?: string
   currentSubStep: number // 0 = temperatura, 1 = intensidade, 2 = profundidade
-  savedAnalysisData?: PigmentAnalysisDataDB // Load previously saved data from Supabase
+  savedAnalysisData?: PigmentAnalysisDataDB // Load previously saved data from database
   onDataChange?: (data: PigmentAnalysisDataDB) => void // Send only DB types to parent
   onSubStepChange?: (subStep: number) => void
+  isReadOnly?: boolean
 }
 export default function PigmentAnalysisStep({
   initialData,
@@ -28,6 +29,7 @@ export default function PigmentAnalysisStep({
   savedAnalysisData,
   onDataChange,
   onSubStepChange,
+  isReadOnly,
 }: PigmentAnalysisStepProps) {
   const [extractedColors, setExtractedColors] = useState<{
     [key: string]: string
@@ -122,7 +124,7 @@ export default function PigmentAnalysisStep({
     }
   }, [initialData])
 
-  // Load previously saved analysis data from Supabase (only once when extractedColors are ready)
+  // Load previously saved analysis data from database (only once when extractedColors are ready)
   useEffect(() => {
     if (Object.keys(extractedColors).length > 0 && !savedDataLoadedRef.current) {
       savedDataLoadedRef.current = true
@@ -150,6 +152,8 @@ export default function PigmentAnalysisStep({
   }, [analysisData, extractedColors])
 
   const handleStepValueChange = (field: string, value: number) => {
+    if (isReadOnly) return
+    
     const stepKey = ANALYSIS_STEPS[currentSubStep]
       .key as keyof PigmentAnalysisDataUI
     const category = getLabelCategory(value, stepKey)
@@ -175,6 +179,8 @@ export default function PigmentAnalysisStep({
   }
 
   const handleProfundidadeComparisonChange = (index: number, value: number) => {
+    if (isReadOnly) return
+    
     const category = getLabelCategory(value, 'profundidade')
 
     setAnalysisData((prev) => {
@@ -197,6 +203,8 @@ export default function PigmentAnalysisStep({
     key: 'temperatura' | 'intensidade' | 'profundidade',
     value: number
   ) => {
+    if (isReadOnly) return
+    
     setAnalysisData((prev) => ({
       ...prev,
       geral: {
@@ -230,6 +238,11 @@ export default function PigmentAnalysisStep({
 
   return (
     <Card className="border-secondary border-2 rounded-xl">
+      {isReadOnly && (
+        <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded mb-4">
+          🔒 Modo visualização - Esta análise já foi concluída
+        </div>
+      )}
       {/* Sub Steps - Dot Style - Read Only (no clicking to jump) */}
       <div className="mb-6">
         <Steps
@@ -264,6 +277,7 @@ export default function PigmentAnalysisStep({
           extractedColors={extractedColors}
           data={(analysisData.profundidade as ProfundidadeComparisonUI[]) || []}
           onComparisonChange={handleProfundidadeComparisonChange}
+          isReadOnly={isReadOnly}
         />
       ) : currentSubStep === 3 ? (
         <GeralSummaryComponent
@@ -271,6 +285,7 @@ export default function PigmentAnalysisStep({
           analysisData={analysisData}
           userFacePhotoUrl={userFacePhotoUrl}
           onGeralChange={handleGeralChange}
+          isReadOnly={isReadOnly}
         />
       ) : (
         <SliderStepComponent
@@ -282,6 +297,7 @@ export default function PigmentAnalysisStep({
             ] as PigmentTemperatureDataUI) || {}
           }
           onValueChange={handleStepValueChange}
+          isReadOnly={isReadOnly}
         />
       )}
     </Card>

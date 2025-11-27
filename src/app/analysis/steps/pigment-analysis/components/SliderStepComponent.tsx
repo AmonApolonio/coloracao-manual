@@ -12,6 +12,7 @@ interface SliderStepComponentProps {
   extractedColors: { [key: string]: string }
   data: PigmentTemperatureDataUI
   onValueChange: (field: string, value: number) => void
+  isReadOnly?: boolean
 }
 
 const getDesaturatedColor = (hex: string): string => {
@@ -85,6 +86,7 @@ export const SliderStepComponent = ({
   extractedColors,
   data,
   onValueChange,
+  isReadOnly,
 }: SliderStepComponentProps) => {
   return (
     <>
@@ -182,6 +184,7 @@ export const SliderStepComponent = ({
                 step={1}
                 value={data[field.value]?.temperature ?? 50}
                 onChange={(value) => onValueChange(field.value, value as number)}
+                disabled={isReadOnly}
                 marks={{
                   0: '0',
                   12.5: '12.5',

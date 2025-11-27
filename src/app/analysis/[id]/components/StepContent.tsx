@@ -25,6 +25,7 @@ interface StepContentProps {
   onMaskAnalysisDataChange: (data: MaskAnalysisDataDB) => void
   onSubStepChange: (subStep: number) => void
   onColorSeasonChange: (season: ColorSeason) => void
+  isReadOnly?: boolean
 }
 
 export function StepContent({
@@ -43,6 +44,7 @@ export function StepContent({
   onMaskAnalysisDataChange,
   onSubStepChange,
   onColorSeasonChange,
+  isReadOnly,
 }: StepContentProps) {
   return (
     <div className="relative">
@@ -60,6 +62,7 @@ export function StepContent({
           onSave={onSaveColorExtraction}
           initialData={analysis.extracao as SVGVectorData}
           onDataChange={onColorDataChange}
+          isReadOnly={isReadOnly}
         />
       )}
 
@@ -68,6 +71,7 @@ export function StepContent({
           userFacePhotoUrl={user.face_photo_url}
           savedData={maskAnalysisData || undefined}
           onDataChange={onMaskAnalysisDataChange}
+          isReadOnly={isReadOnly}
         />
       )}
 
@@ -79,6 +83,7 @@ export function StepContent({
           savedAnalysisData={pigmentAnalysisData || undefined}
           onDataChange={onPigmentDataChange}
           onSubStepChange={onSubStepChange}
+          isReadOnly={isReadOnly}
         />
       )}
 
@@ -91,6 +96,7 @@ export function StepContent({
           extractedColors={extractedColors}
           selectedColorSeason={selectedColorSeason}
           onColorSeasonChange={onColorSeasonChange}
+          isReadOnly={isReadOnly}
         />
       )}
     </div>

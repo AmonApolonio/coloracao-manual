@@ -33,6 +33,7 @@ interface FinalClassificationStepProps {
   extractedColors: { [key: string]: string }
   selectedColorSeason: ColorSeason | null | undefined
   onColorSeasonChange: (season: ColorSeason) => void
+  isReadOnly?: boolean
 }
 
 export const FinalClassificationStep = ({
@@ -43,6 +44,7 @@ export const FinalClassificationStep = ({
   extractedColors,
   selectedColorSeason,
   onColorSeasonChange,
+  isReadOnly,
 }: FinalClassificationStepProps) => {
   // Extract geral values from pigment analysis
   const geralTemperatura = pigmentAnalysisData?.geral?.temperatura ?? null
@@ -91,6 +93,11 @@ export const FinalClassificationStep = ({
 
   return (
     <div className="space-y-6 w-full py-5">
+      {isReadOnly && (
+        <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded">
+          🔒 Modo visualização - Esta análise já foi concluída
+        </div>
+      )}
       {/* Main Season Selection - Prominent at top */}
       <div className="rounded-xl p-6 border-2 border-secondary shadow-sm" style={{ backgroundColor: '#F5F0EA' }}>
         <div className="flex items-end justify-between gap-4">
@@ -100,11 +107,12 @@ export const FinalClassificationStep = ({
             </Text>
             <Select
               value={selectedColorSeason || undefined}
-              onChange={onColorSeasonChange}
+              onChange={isReadOnly ? undefined : onColorSeasonChange}
               options={colorSeasonOptions}
               placeholder="Selecione a estação..."
               className="w-full"
               size="large"
+              disabled={isReadOnly}
               style={{
                 borderColor: selectedColorSeason ? '#947B62' : undefined,
               }}

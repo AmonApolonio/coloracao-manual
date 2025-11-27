@@ -1,5 +1,5 @@
 /**
- * Database types for Supabase persistence
+ * Database types for data persistence
  * These types represent the minimal data structure saved to the database
  * containing only numeric values and no calculated properties
  */

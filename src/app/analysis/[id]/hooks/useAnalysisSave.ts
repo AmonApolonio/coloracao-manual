@@ -3,7 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
-import { supabase } from '@/lib/supabase'
+import {
+  updateAnalysisColorExtraction,
+  updateAnalysisMaskData,
+  updateAnalysisPigmentData,
+  updateAnalysisColorSeason,
+  saveAnalysisProgress,
+  completeAnalysis,
+} from '@/lib/supabase'
 import { Analysis, AnalysisStatus } from '@/lib/types'
 import { PigmentAnalysisDataDB, MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
 import { TOTAL_STEPS } from '../constants'
@@ -16,6 +23,7 @@ interface UseAnalysisSaveProps {
   pigmentAnalysisData: PigmentAnalysisDataDB | null
   maskAnalysisData: MaskAnalysisDataDB | null
   colorSeason?: ColorSeason | null
+  isReadOnly?: boolean
 }
 
 interface UseAnalysisSaveReturn {
@@ -57,34 +65,29 @@ export function useAnalysisSave({
   pigmentAnalysisData,
   maskAnalysisData,
   colorSeason,
+  isReadOnly,
 }: UseAnalysisSaveProps): UseAnalysisSaveReturn {
   const router = useRouter()
   const { message } = AntdApp.useApp()
   const [saving, setSaving] = useState(false)
 
+  // Helper to check if save operations are allowed
+  const canSave = () => {
+    if (isReadOnly || analysis?.status === 'completed') {
+      message.warning('Esta análise já foi concluída e não pode ser alterada.')
+      return false
+    }
+    return true
+  }
+
   // Save handler for step 0 (Color Extraction)
   const handleSaveColorExtractionStep = async (svgVectorData: any) => {
-    if (!analysis) return
+    if (!analysis || !canSave()) return
 
     try {
       setSaving(true)
 
-      const updatePayload: any = {
-        current_step: currentStep + 1,
-        status: 'in_process' as AnalysisStatus,
-        updated_at: new Date().toISOString(),
-        extracao: svgVectorData,
-      }
-
-      const { error } = await supabase
-        .from('analyses')
-        .update(updatePayload)
-        .eq('id', analysis.id)
-
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
-      }
+      await updateAnalysisColorExtraction(analysis.id, svgVectorData, currentStep)
 
       setAnalysis({
         ...analysis,
@@ -109,45 +112,23 @@ export function useAnalysisSave({
 
   // Generic save handler for other steps (steps 1-6)
   const handleSaveOtherStep = async () => {
-    if (!analysis) return
+    if (!analysis || !canSave()) return
 
     try {
       setSaving(true)
 
-      const updatePayload: any = {
-        current_step: currentStep + 1,
-        status: 'in_process' as AnalysisStatus,
-        updated_at: new Date().toISOString(),
-      }
-
       // Save mask analysis data if we're in mask analysis step (1)
       if (currentStep === 1 && maskAnalysisData) {
-        updatePayload.analise_mascaras = maskAnalysisData
+        await updateAnalysisMaskData(analysis.id, maskAnalysisData, currentStep)
       }
-
       // Save pigment analysis data if we're in pigment steps (2-5)
-      if (currentStep >= 2 && currentStep <= 5 && pigmentAnalysisData) {
+      else if (currentStep >= 2 && currentStep <= 5 && pigmentAnalysisData) {
         const mergedData = mergePigmentAnalysisData(analysis, currentStep - 1, pigmentAnalysisData)
-        updatePayload.analise_pigmentos = mergedData
+        await updateAnalysisPigmentData(analysis.id, mergedData, currentStep)
       }
-
-      // Save color_season if we're in final classification step (6) - but don't change status
-      if (currentStep === 6 && colorSeason) {
-        updatePayload.color_season = colorSeason
-        // Don't advance to next step for final step
-        delete updatePayload.current_step
-        // Keep status as in_process (not changing it)
-        delete updatePayload.status
-      }
-
-      const { error } = await supabase
-        .from('analyses')
-        .update(updatePayload)
-        .eq('id', analysis.id)
-
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
+      // Save color_season if we're in final classification step (6)
+      else if (currentStep === 6 && colorSeason) {
+        await updateAnalysisColorSeason(analysis.id, colorSeason)
       }
 
       setAnalysis({
@@ -155,7 +136,7 @@ export function useAnalysisSave({
         current_step: currentStep === 6 ? currentStep : currentStep + 1,
         status: 'in_process',
         color_season: colorSeason || null,
-        analise_pigmentos: updatePayload.analise_pigmentos,
+        analise_pigmentos: pigmentAnalysisData || undefined,
       })
 
       if (currentStep < TOTAL_STEPS - 1 && currentStep !== 6) {
@@ -176,37 +157,31 @@ export function useAnalysisSave({
   const handleSaveAndExit = async (svgVectorData: any) => {
     if (!analysis) return
 
+    // For read-only mode, just navigate without saving
+    if (isReadOnly || analysis?.status === 'completed') {
+      router.push('/')
+      return
+    }
+
     try {
       setSaving(true)
 
-      const updatePayload: any = {
-        current_step: currentStep + 1,
-        status: 'in_process' as AnalysisStatus,
-        updated_at: new Date().toISOString(),
-      }
+      const updateData: any = {}
 
       if (currentStep === 0) {
-        updatePayload.extracao = svgVectorData
+        updateData.extracao = svgVectorData
       }
 
       if (currentStep === 1 && maskAnalysisData) {
-        updatePayload.analise_mascaras = maskAnalysisData
+        updateData.analise_mascaras = maskAnalysisData
       }
 
       if (currentStep >= 2 && currentStep <= 5 && pigmentAnalysisData) {
         const mergedData = mergePigmentAnalysisData(analysis, currentStep - 1, pigmentAnalysisData)
-        updatePayload.analise_pigmentos = mergedData
+        updateData.analise_pigmentos = mergedData
       }
 
-      const { error } = await supabase
-        .from('analyses')
-        .update(updatePayload)
-        .eq('id', analysis.id)
-
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
-      }
+      await saveAnalysisProgress(analysis.id, currentStep, updateData)
 
       message.success('Dados salvos!')
     } catch (error) {
@@ -220,29 +195,12 @@ export function useAnalysisSave({
 
   // Complete analysis handler
   const handleCompleteAnalysis = async (finalColorSeason?: ColorSeason | null) => {
-    if (!analysis) return
+    if (!analysis || !canSave()) return
 
     try {
       setSaving(true)
 
-      const updatePayload: any = {
-        status: 'completed' as AnalysisStatus,
-        current_step: 7,
-        analyzed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-
-      // Save the final color_season if provided
-      if (finalColorSeason) {
-        updatePayload.color_season = finalColorSeason
-      }
-
-      const { error } = await supabase
-        .from('analyses')
-        .update(updatePayload)
-        .eq('id', analysis.id)
-
-      if (error) throw error
+      await completeAnalysis(analysis.id, finalColorSeason)
 
       message.success('Análise concluída com sucesso!')
       setTimeout(() => router.push('/'), 1500)

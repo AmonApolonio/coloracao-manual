@@ -12,18 +12,28 @@ import {
   Spin,
   message,
 } from 'antd'
-import { UserOutlined, PlusOutlined, EditOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { UserOutlined, PlusOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons'
 import type { TabsProps } from 'antd'
-import { supabase } from '@/lib/supabase'
-import { User, UserWithAnalysis } from '@/lib/types'
+import { 
+  loadAllUsersAndAnalyses, 
+  getOrCreateAnalysisForUser, 
+  createNewAnalysis 
+} from '@/lib/supabase'
+import { User } from '@/lib/types'
 
 const { Content } = Layout
+
+interface UserWithAllAnalyses extends User {
+  analyses: any[];
+}
 
 export default function Home() {
   const router = useRouter()
   const [usersPending, setUsersPending] = useState<User[]>([])
-  const [usersInAnalysis, setUsersInAnalysis] = useState<UserWithAnalysis[]>([])
-  const [usersCompleted, setUsersCompleted] = useState<UserWithAnalysis[]>([])
+  const [usersInAnalysis, setUsersInAnalysis] = useState<UserWithAllAnalyses[]>([])
+  const [usersCompleted, setUsersCompleted] = useState<UserWithAllAnalyses[]>([])
+  const [analysesInAnalysisCount, setAnalysesInAnalysisCount] = useState(0)
+  const [analysesCompletedCount, setAnalysesCompletedCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -33,39 +43,69 @@ export default function Home() {
   const loadData = async () => {
     try {
       setLoading(true)
-      // Fetch all users and analyses
-      const { data: allUsers, error: errorAll } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const { allUsers, analyses } = await loadAllUsersAndAnalyses()
 
-      if (errorAll) throw errorAll
+      // Group analyses by user_id
+      const analysesByUser = new Map<string, any[]>()
+      analyses?.forEach(a => {
+        const existing = analysesByUser.get(a.user_id) || []
+        existing.push(a)
+        analysesByUser.set(a.user_id, existing)
+      })
 
-      const { data: analyses, error: errorAnalyses } = await supabase
-        .from('analyses')
-        .select('*')
+      // Users with no analysis at all
+      const pending = allUsers?.filter(u => !analysesByUser.has(u.id)) || []
 
-      if (errorAnalyses) throw errorAnalyses
-
-      const analyzedUserMap = new Map(analyses?.map(a => [a.user_id, a]) || [])
-
-      const pending = allUsers?.filter(u => !analyzedUserMap.has(u.id)) || []
+      // Users with at least one in_process analysis
       const inAnalysis = (allUsers || [])
-        .filter(u => analyzedUserMap.get(u.id)?.status === 'in_process')
-        .map(u => ({
-          ...u,
-          analysis: analyzedUserMap.get(u.id) || null,
-        }))
+        .filter(u => {
+          const userAnalyses = analysesByUser.get(u.id) || []
+          return userAnalyses.some(a => a.status === 'in_process')
+        })
+        .map(u => {
+          const userAnalyses = analysesByUser.get(u.id) || []
+          // Sort by created_at ascending to get chronological order (1st, 2nd, 3rd, etc.)
+          const sortedAnalyses = userAnalyses.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          // Add index to each analysis
+          const analysesWithIndex = sortedAnalyses.map((analysis, idx) => ({
+            ...analysis,
+            analysisIndex: idx + 1,
+          }))
+          return {
+            ...u,
+            analyses: analysesWithIndex,
+          }
+        })
+
+      // Users who have completed analyses
       const completed = (allUsers || [])
-        .filter(u => analyzedUserMap.get(u.id)?.status === 'completed')
-        .map(u => ({
-          ...u,
-          analysis: analyzedUserMap.get(u.id) || null,
-        }))
+        .filter(u => {
+          const userAnalyses = analysesByUser.get(u.id) || []
+          return userAnalyses.some(a => a.status === 'completed')
+        })
+        .map(u => {
+          const userAnalyses = analysesByUser.get(u.id) || []
+          // Sort by created_at ascending to get chronological order (1st, 2nd, 3rd, etc.)
+          const sortedAnalyses = userAnalyses.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          // Add index to each analysis
+          const analysesWithIndex = sortedAnalyses.map((analysis, idx) => ({
+            ...analysis,
+            analysisIndex: idx + 1,
+          }))
+          return {
+            ...u,
+            analyses: analysesWithIndex,
+          }
+        })
+
+      const inProcessAnalyses = (analyses || []).filter(a => a.status === 'in_process')
+      const completedAnalyses = (analyses || []).filter(a => a.status === 'completed')
 
       setUsersPending(pending)
       setUsersInAnalysis(inAnalysis)
       setUsersCompleted(completed)
+      setAnalysesInAnalysisCount(inProcessAnalyses.length || 0)
+      setAnalysesCompletedCount(completedAnalyses.length || 0)
     } catch (error) {
       console.error('Error loading data:', error)
       message.error('Erro ao carregar dados')
@@ -74,82 +114,151 @@ export default function Home() {
     }
   }
 
-  const handleAnalyzeUser = async (user: User) => {
+  const handleAnalyzeUser = async (user: User, analysisId?: string) => {
     try {
-      // Check if analysis exists
-      const { data: existingAnalysis, error: checkError } = await supabase
-        .from('analyses')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError
+      // If an analysis ID is provided, navigate directly to it
+      if (analysisId) {
+        router.push(`/analysis/${analysisId}`)
+        return
       }
 
-      let analysisId: string
-
-      if (existingAnalysis) {
-        // Navigate to existing analysis
-        analysisId = existingAnalysis.id
-      } else {
-        // Create new analysis
-        const { data: newAnalysis, error: insertError } = await supabase
-          .from('analyses')
-          .insert({
-            user_id: user.id,
-            status: 'not_started',
-            current_step: 1,
-            extracao: {},
-          })
-          .select('id')
-          .single()
-
-        if (insertError) throw insertError
-        if (!newAnalysis) throw new Error('Failed to create analysis')
-
-        analysisId = newAnalysis.id
-      }
-
-      router.push(`/analysis/${analysisId}`)
+      const targetAnalysisId = await getOrCreateAnalysisForUser(user.id)
+      router.push(`/analysis/${targetAnalysisId}`)
     } catch (error) {
       console.error('Error navigating to analysis:', error)
       message.error('Erro ao abrir análise')
     }
   }
 
-  const UserListItem = ({ user, analysis }: { user: User; analysis?: any }) => (
-    <div className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
-      <div className="flex items-center gap-4 flex-1">
-        <Avatar
-          size={48}
-          icon={<UserOutlined />}
-          src={user.face_photo_url || undefined}
-        />
-        <div className="flex-1">
-          <div className="font-semibold">{user.name}</div>
-          {analysis ? (
-            <div className="text-sm text-gray-600">
-              <div><strong>Tipo:</strong> {analysis.color_season || 'Pendente'}</div>
-              {analysis.status === 'in_process' && (
-                <div className="text-xs text-blue-600">Em progresso - Etapa {analysis.current_step}</div>
+  // Navigate to view an existing analysis (read-only mode)
+  const handleViewAnalysis = (analysisId: string) => {
+    router.push(`/analysis/${analysisId}`)
+  }
+
+  // Create a new analysis for a user who already has completed analyses
+  const handleCreateNewAnalysis = async (user: User) => {
+    try {
+      await createNewAnalysis(user.id)
+
+      // Refresh the list to show the new analysis
+      await loadData()
+      
+      // Navigate to the new analysis
+      const targetAnalysisId = await getOrCreateAnalysisForUser(user.id)
+      router.push(`/analysis/${targetAnalysisId}`)
+    } catch (error) {
+      console.error('Error creating new analysis:', error)
+      message.error('Erro ao criar nova análise')
+    }
+  }
+
+  const UserListItem = ({ user, analyses, isCompleted }: { user: User; analyses?: any[]; isCompleted?: boolean }) => {
+    // Filter analyses by status
+    const visibleAnalyses = analyses?.filter(a => 
+      isCompleted ? a.status === 'completed' : a.status === 'in_process'
+    ) || []
+
+    const formatDate = (dateString: string | null) => {
+      if (!dateString) return 'N/A'
+      return new Date(dateString).toLocaleDateString('pt-BR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    return (
+      <div>
+        {visibleAnalyses.length === 0 ? (
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+            <div className="flex items-center gap-4 flex-1">
+              <Avatar
+                size={48}
+                icon={<UserOutlined />}
+                src={user.face_photo_url || undefined}
+              />
+              <div className="flex-1">
+                <div className="font-semibold">{user.name}</div>
+                <div className="text-sm text-gray-400">Sem análise</div>
+              </div>
+            </div>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => handleAnalyzeUser(user)}
+            >
+              Iniciar
+            </Button>
+          </div>
+        ) : (
+          visibleAnalyses.map((analysis) => (
+            <div key={analysis.id} className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-4 flex-1">
+                <Avatar
+                  size={48}
+                  icon={<UserOutlined />}
+                  src={user.face_photo_url || undefined}
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold">{user.name}</div>
+                    {analysis.analysisIndex >= 2 && (
+                      <div className="bg-gray-200 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                        {analysis.analysisIndex}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <div><strong>Tipo:</strong> {analysis.color_season || 'Pendente'}</div>
+                    <div><strong>Data:</strong> {formatDate(analysis.analyzed_at)}</div>
+                    {analysis.status === 'in_process' && (
+                      <div className="text-xs text-blue-600">Em progresso - Etapa {analysis.current_step}</div>
+                    )}
+                    {analysis.status === 'completed' && (
+                      <div className="text-xs text-green-600">✓ Concluída</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Buttons for completed analyses */}
+              {isCompleted && analysis ? (
+                <div className="flex gap-2">
+                  <Button
+                    type="default"
+                    size="small"
+                    icon={<EyeOutlined />}
+                    onClick={() => handleViewAnalysis(analysis.id)}
+                  >
+                    Visualizar
+                  </Button>
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => handleCreateNewAnalysis(user)}
+                  >
+                    Nova Análise
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => handleAnalyzeUser(user, analysis.id)}
+                >
+                  Continuar
+                </Button>
               )}
             </div>
-          ) : (
-            <div className="text-sm text-gray-400">Sem análise</div>
-          )}
-        </div>
+          ))
+        )}
       </div>
-      <Button
-        type="primary"
-        size="small"
-        icon={analysis ? <EditOutlined /> : <PlusOutlined />}
-        onClick={() => handleAnalyzeUser(user)}
-      >
-        {analysis ? 'Continuar' : 'Iniciar'}
-      </Button>
-    </div>
-  )
+    )
+  }
 
   const items: TabsProps['items'] = [
     {
@@ -177,7 +286,7 @@ export default function Home() {
       key: '2',
       label: (
         <span>
-          Em Análise <span className="text-secondary">({usersInAnalysis.length})</span>
+          Em Análise <span className="text-secondary">({analysesInAnalysisCount})</span>
         </span>
       ),
       children: (
@@ -190,7 +299,7 @@ export default function Home() {
                 <UserListItem
                   key={item.id}
                   user={item}
-                  analysis={item.analysis}
+                  analyses={item.analyses}
                 />
               ))}
             </div>
@@ -202,7 +311,7 @@ export default function Home() {
       key: '3',
       label: (
         <span>
-          Analisados <span className="text-secondary">({usersCompleted.length})</span>
+          Analisados <span className="text-secondary">({analysesCompletedCount})</span>
         </span>
       ),
       children: (
@@ -215,7 +324,8 @@ export default function Home() {
                 <UserListItem
                   key={item.id}
                   user={item}
-                  analysis={item.analysis}
+                  analyses={item.analyses}
+                  isCompleted={true}
                 />
               ))}
             </div>

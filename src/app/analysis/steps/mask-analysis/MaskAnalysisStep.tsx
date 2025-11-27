@@ -33,6 +33,7 @@ interface MaskAnalysisStepProps {
   userFacePhotoUrl: string | null | undefined
   savedData?: MaskAnalysisDataDB
   onDataChange?: (data: MaskAnalysisDataDB) => void
+  isReadOnly?: boolean
 }
 
 interface MaskComparison {
@@ -113,7 +114,7 @@ const MASK_COMPARISONS: MaskComparison[] = [
   },
 ]
 
-const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, savedData, onDataChange }) => {
+const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, savedData, onDataChange, isReadOnly }) => {
   const [sharedFacePosition, setSharedFacePosition] = useState<FacePositionData>(
     savedData?.facePosition || { x: 160, y: 240, scale: 1 }
   )
@@ -154,6 +155,8 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
   }, [])
 
   const handleMaskSelection = useCallback((comparisonId: string, value: 'fria' | 'quente' | 'suave' | 'brilhante' | 'escura' | 'clara' | 'ouro' | 'prata') => {
+    if (isReadOnly) return
+    
     setSelectedMasks((prev) => {
       const updated = {
         ...prev,
@@ -179,10 +182,15 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
     
     // Clear selected season when any mask changes (since season depends on the other options)
     setSelectedSeason(null)
-  }, [])
+  }, [isReadOnly])
 
   return (
     <div className="space-y-6">
+      {isReadOnly && (
+        <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded">
+          🔒 Modo visualização - Esta análise já foi concluída
+        </div>
+      )}
       {MASK_COMPARISONS.map((comparison) => (
         <Card key={comparison.id} className="border-secondary border-2 rounded-xl">
           <div className="mb-6">
@@ -190,19 +198,19 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
               {comparison.title}
             </h2>
             <p className="text-sm text-gray-600">
-              Selecione qual máscara melhor se adapta ao rosto.
+              {isReadOnly ? 'Visualize a seleção da máscara.' : 'Selecione qual máscara melhor se adapta ao rosto.'}
             </p>
           </div>
 
           <div className="grid items-start" style={{ gridTemplateColumns: '1fr auto 1fr', gap: '1rem' }}>
             {/* Left Option */}
             <div
-              className={`relative cursor-pointer transition-all duration-200 rounded-xl p-1 ${
+              className={`relative ${isReadOnly ? '' : 'cursor-pointer'} transition-all duration-200 rounded-xl p-1 ${
                 selectedMasks[comparison.id] === comparison.leftValue
                   ? 'ring-2 ring-secondary'
-                  : 'border-2 border-dashed border-gray-300 hover:border-secondary'
+                  : isReadOnly ? 'border-2 border-gray-200' : 'border-2 border-dashed border-gray-300 hover:border-secondary'
               }`}
-              onClick={() => handleMaskSelection(comparison.id, comparison.leftValue)}
+              onClick={() => !isReadOnly && handleMaskSelection(comparison.id, comparison.leftValue)}
             >
               <div className="my-2 text-center">
                 <h3 className="text-sm font-semibold text-gray-700">{comparison.leftLabel}</h3>
@@ -230,12 +238,12 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
 
             {/* Right Option */}
             <div
-              className={`relative cursor-pointer transition-all duration-200 rounded-xl p-1 ${
+              className={`relative ${isReadOnly ? '' : 'cursor-pointer'} transition-all duration-200 rounded-xl p-1 ${
                 selectedMasks[comparison.id] === comparison.rightValue
                   ? 'ring-2 ring-secondary'
-                  : 'border-2 border-dashed border-gray-300 hover:border-secondary'
+                  : isReadOnly ? 'border-2 border-gray-200' : 'border-2 border-dashed border-gray-300 hover:border-secondary'
               }`}
-              onClick={() => handleMaskSelection(comparison.id, comparison.rightValue)}
+              onClick={() => !isReadOnly && handleMaskSelection(comparison.id, comparison.rightValue)}
             >
               <div className="my-2 text-center">
                 <h3 className="text-sm font-semibold text-gray-700">{comparison.rightLabel}</h3>
@@ -277,12 +285,12 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
                 {getSeasonVariants(seasonResult.season!).map((variant) => (
                   <div
                     key={variant}
-                    className={`relative cursor-pointer transition-all duration-200 rounded-xl p-4 text-center ${
+                    className={`relative ${isReadOnly ? '' : 'cursor-pointer'} transition-all duration-200 rounded-xl p-4 text-center ${
                       selectedSeason === getColorSeason(seasonResult.season!, variant)
                         ? 'ring-2 ring-secondary bg-white'
-                        : 'border-2 border-dashed border-gray-300 hover:border-secondary bg-gray-50'
+                        : isReadOnly ? 'border-2 border-gray-200 bg-gray-50' : 'border-2 border-dashed border-gray-300 hover:border-secondary bg-gray-50'
                     }`}
-                    onClick={() => setSelectedSeason(getColorSeason(seasonResult.season!, variant))}
+                    onClick={() => !isReadOnly && setSelectedSeason(getColorSeason(seasonResult.season!, variant))}
                   >
                     <div className="mb-4">
                       <h3 className="font-semibold text-gray-700">{variant}</h3>

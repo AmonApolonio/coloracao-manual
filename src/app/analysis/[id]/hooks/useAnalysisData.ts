@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
-import { supabase } from '@/lib/supabase'
+import { fetchAnalysisById, fetchUserById } from '@/lib/supabase'
 import { User, Analysis, SVGVectorData } from '@/lib/types'
 import { PigmentAnalysisDataDB, MaskAnalysisDataDB } from '@/lib/types-db'
 import { isAllColorsExtracted, extractColorsFromData } from '../utils'
@@ -84,13 +84,8 @@ export function useAnalysisData(analysisId: string): UseAnalysisDataReturn {
         setLoading(true)
 
         // Fetch analysis
-        const { data: analysisData, error: analysisError } = await supabase
-          .from('analyses')
-          .select('*')
-          .eq('id', analysisId)
-          .maybeSingle()
+        const analysisData = await fetchAnalysisById(analysisId)
 
-        if (analysisError) throw analysisError
         if (!analysisData) {
           message.error('Análise não encontrada')
           router.push('/')
@@ -100,13 +95,8 @@ export function useAnalysisData(analysisId: string): UseAnalysisDataReturn {
         setAnalysis(analysisData)
 
         // Fetch user
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', analysisData.user_id)
-          .maybeSingle()
+        const userData = await fetchUserById(analysisData.user_id)
 
-        if (userError) throw userError
         if (userData) {
           setUser(userData)
         }

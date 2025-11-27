@@ -12,6 +12,7 @@ interface ProfundidadeComparisonComponentProps {
   extractedColors: { [key: string]: string }
   data: ProfundidadeComparisonUI[]
   onComparisonChange: (index: number, value: number) => void
+  isReadOnly?: boolean
 }
 
 const getDesaturatedColor = (hex: string): string => {
@@ -106,6 +107,7 @@ export const ProfundidadeComparisonComponent = ({
   extractedColors,
   data,
   onComparisonChange,
+  isReadOnly,
 }: ProfundidadeComparisonComponentProps) => {
   const [hoveredColor, setHoveredColor] = useState<string | null>(null)
 
@@ -271,6 +273,7 @@ export const ProfundidadeComparisonComponent = ({
                 onChange={(value) =>
                   onComparisonChange(index, value as number)
                 }
+                disabled={isReadOnly}
                 marks={{
                   0: '0',
                   12.5: '12.5',

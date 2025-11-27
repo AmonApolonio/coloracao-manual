@@ -1,8 +1,8 @@
 'use client'
 
 import { RefObject, useState, useEffect } from 'react'
-import { Badge, Button, Space, Steps, Tooltip } from 'antd'
-import { ArrowLeftOutlined, ArrowRightOutlined, SaveOutlined } from '@ant-design/icons'
+import { Badge, Button, Space, Steps, Tooltip, Modal } from 'antd'
+import { ArrowLeftOutlined, ArrowRightOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
 import { User, Analysis } from '@/lib/types'
@@ -32,6 +32,7 @@ interface AnalysisHeaderProps {
   onSaveOtherStep: () => Promise<void>
   onSaveAndExit: (svgVectorData: any) => Promise<void>
   onCompleteAnalysis: (colorSeason?: ColorSeason | null) => Promise<void>
+  isReadOnly?: boolean
 }
 
 export function AnalysisHeader({
@@ -51,11 +52,14 @@ export function AnalysisHeader({
   onSaveOtherStep,
   onSaveAndExit,
   onCompleteAnalysis,
+  isReadOnly,
 }: AnalysisHeaderProps) {
   const router = useRouter()
   const { message } = AntdApp.useApp()
   const { mainStep, subStep } = getStepMapping(currentStep)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [showExitModal, setShowExitModal] = useState(false)
+  const [exitLoading, setExitLoading] = useState(false)
 
   // Track scroll position
   useEffect(() => {
@@ -91,19 +95,56 @@ export function AnalysisHeader({
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleSaveAndExitClick = async () => {
+  // Handle save button click (save only, no exit)
+  const handleSaveClick = async () => {
     try {
       let svgVectorData = {}
       if (currentStep === 0 && colorExtractionRef.current) {
         svgVectorData = colorExtractionRef.current.getSVGVectorData()
       }
       await onSaveAndExit(svgVectorData)
-      await new Promise(resolve => setTimeout(resolve, 500))
+      message.success('Progresso salvo!')
+    } catch (error) {
+      console.error('Error saving:', error)
+      message.error('Erro ao salvar')
+    }
+  }
+
+  // Handle exit button click
+  const handleExitClick = () => {
+    if (isReadOnly) {
+      // In read-only mode, just leave without asking
+      router.push('/')
+    } else {
+      // Show confirmation modal
+      setShowExitModal(true)
+    }
+  }
+
+  // Handle save and exit from modal
+  const handleSaveAndExit = async () => {
+    try {
+      setExitLoading(true)
+      let svgVectorData = {}
+      if (currentStep === 0 && colorExtractionRef.current) {
+        svgVectorData = colorExtractionRef.current.getSVGVectorData()
+      }
+      await onSaveAndExit(svgVectorData)
+      message.success('Progresso salvo!')
       router.push('/')
     } catch (error) {
       console.error('Error during save and exit:', error)
       message.error('Erro ao salvar antes de sair')
+    } finally {
+      setExitLoading(false)
+      setShowExitModal(false)
     }
+  }
+
+  // Handle exit without saving from modal
+  const handleExitWithoutSaving = () => {
+    setShowExitModal(false)
+    router.push('/')
   }
 
   // Get current step title with sub-step for Pigmentos
@@ -126,12 +167,41 @@ export function AnalysisHeader({
         }
       `}
     >
+      {/* Exit Confirmation Modal */}
+      <Modal
+        title="Sair da Análise"
+        open={showExitModal}
+        onCancel={() => setShowExitModal(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setShowExitModal(false)}>
+            Cancelar
+          </Button>,
+          <Button key="exitWithoutSave" danger onClick={handleExitWithoutSaving}>
+            Sair sem Salvar
+          </Button>,
+          <Button key="saveAndExit" type="primary" loading={exitLoading} onClick={handleSaveAndExit}>
+            Salvar e Sair
+          </Button>,
+        ]}
+      >
+        <p>Você tem alterações não salvas. O que deseja fazer?</p>
+      </Modal>
+
       <div className={`
         flex items-center justify-between gap-4 transition-all duration-300 w-full
         ${isScrolled ? 'px-4' : 'px-0'}
       `}>
-        {/* Left: User Info */}
+        {/* Left: Exit Button + User Info */}
         <div className="flex items-center gap-3 min-w-0">
+          {/* Exit Button */}
+          <Button
+            type="text"
+            size={isScrolled ? 'small' : 'middle'}
+            icon={<CloseOutlined />}
+            onClick={handleExitClick}
+            className="text-gray-500 hover:text-gray-700"
+          />
+          
           {user.face_photo_url && (
             <img
               src={user.face_photo_url}
@@ -234,40 +304,65 @@ export function AnalysisHeader({
               </Button>
             )}
             
-            <Button
-              type="text"
-              size={isScrolled ? 'small' : 'middle'}
-              icon={<SaveOutlined />}
-              loading={saving}
-              onClick={handleSaveAndExitClick}
-            >
-              {!isScrolled && <span className="hidden md:inline">Salvar</span>}
-            </Button>
-
-            {currentStep === TOTAL_STEPS - 1 ? (
+            {/* Save button - only show when not in read-only mode */}
+            {!isReadOnly && (
               <Button
-                type="primary"
+                type="text"
                 size={isScrolled ? 'small' : 'middle'}
                 icon={<SaveOutlined />}
                 loading={saving}
-                onClick={() => onCompleteAnalysis(selectedColorSeason)}
+                onClick={handleSaveClick}
               >
-                {isScrolled ? '' : 'Concluir'}
+                {!isScrolled && <span className="hidden md:inline">Salvar</span>}
               </Button>
-            ) : (
-              <Tooltip title={disabledTooltip} color="#ff4d4f">
-                <Button
-                  type="primary"
-                  size={isScrolled ? 'small' : 'middle'}
-                  loading={saving}
-                  disabled={isDisabled}
-                  onClick={handleNextClick}
-                  icon={isScrolled ? <ArrowRightOutlined /> : undefined}
+            )}
+
+            {/* Hide next/complete buttons in read-only mode */}
+            {!isReadOnly && (
+              currentStep === TOTAL_STEPS - 1 ? (
+                <Tooltip 
+                  title={!selectedColorSeason ? 'Selecione a Classificação Final da Estação' : null} 
+                  color="#ff4d4f"
                 >
-                  {isScrolled ? '' : 'Próximo'}
-                  {!isScrolled && <ArrowRightOutlined />}
-                </Button>
-              </Tooltip>
+                  <Button
+                    type="primary"
+                    size={isScrolled ? 'small' : 'middle'}
+                    icon={<SaveOutlined />}
+                    loading={saving}
+                    disabled={!selectedColorSeason}
+                    onClick={() => onCompleteAnalysis(selectedColorSeason)}
+                  >
+                    {isScrolled ? '' : 'Concluir'}
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Tooltip title={disabledTooltip} color="#ff4d4f">
+                  <Button
+                    type="primary"
+                    size={isScrolled ? 'small' : 'middle'}
+                    loading={saving}
+                    disabled={isDisabled}
+                    onClick={handleNextClick}
+                    icon={isScrolled ? <ArrowRightOutlined /> : undefined}
+                  >
+                    {isScrolled ? '' : 'Próximo'}
+                    {!isScrolled && <ArrowRightOutlined />}
+                  </Button>
+                </Tooltip>
+              )
+            )}
+
+            {/* Show next button for navigation only in read-only mode */}
+            {isReadOnly && currentStep < TOTAL_STEPS - 1 && (
+              <Button
+                type="primary"
+                size={isScrolled ? 'small' : 'middle'}
+                onClick={() => setCurrentStep(currentStep + 1)}
+                icon={isScrolled ? <ArrowRightOutlined /> : undefined}
+              >
+                {isScrolled ? '' : 'Próximo'}
+                {!isScrolled && <ArrowRightOutlined />}
+              </Button>
             )}
           </Space>
         </div>
