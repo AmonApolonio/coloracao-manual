@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Coloracao Manual
 
-## Getting Started
+A web application for manual color analysis and seasonal classification, designed to help determine a person's color season for hair coloring, makeup, and personal styling.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **User Management**: Manage users with facial and eye photos
+- **Color Extraction**: Interactive extraction of colors from facial features (eyes, hair, eyebrows, skin, etc.)
+- **Mask Analysis**: Position and analyze facial masks for color assessment
+- **Pigment Analysis**: Detailed analysis of temperature, intensity, and depth using interactive sliders
+- **Season Classification**: Automatic and manual classification into color seasons (Warm, Cool, etc.)
+- **Multi-Analysis Support**: Track multiple analyses per user with progress tracking
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Frontend**: Next.js 16, React 19, TypeScript
+- **UI**: Ant Design, Tailwind CSS
+- **Canvas**: Konva.js for interactive color extraction and mask positioning
+- **Backend**: Supabase (PostgreSQL, real-time subscriptions)
+- **Styling**: Tailwind CSS v4
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project Structure
 
-## Learn More
+- `src/app/` - Next.js app router pages and components
+- `src/lib/` - Core utilities, types, and Supabase client
+- `supabase/` - Database migrations and configuration
+- `public/` - Static assets
 
-To learn more about Next.js, take a look at the following resources:
+## Analysis Steps
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Color Extraction**: Extract colors from key facial areas
+2. **Mask Analysis**: Position face and analyze color masks
+3. **Pigment Analysis**: Adjust sliders for temperature, intensity, and depth comparisons
+4. **Final Classification**: Determine and confirm color season

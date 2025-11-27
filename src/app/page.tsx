@@ -53,8 +53,11 @@ export default function Home() {
         analysesByUser.set(a.user_id, existing)
       })
 
-      // Users with no analysis at all
-      const pending = allUsers?.filter(u => !analysesByUser.has(u.id)) || []
+      // Users with no analysis at all OR with analyses that haven't started
+      const pending = allUsers?.filter(u => {
+        const userAnalyses = analysesByUser.get(u.id) || []
+        return userAnalyses.length === 0 || userAnalyses.some(a => a.status === 'not_started')
+      }) || []
 
       // Users with at least one in_process analysis
       const inAnalysis = (allUsers || [])
