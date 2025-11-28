@@ -64,26 +64,50 @@ export const rgbToHsv = (r: number, g: number, b: number) => {
   }
 }
 
-// Convert RGB to Lab (intermediate step for HCL)
-export const rgbToLab = (r: number, g: number, b: number) => {
-  let [x, y, z] = [r, g, b].map((val) => {
-    val = val > 0.04045 ? Math.pow((val + 0.055) / 1.055, 2.4) : val / 12.92
-    return val * 100
-  })
+// Convert RGB to XYZ
+export const rgbToXyz = (r: number, g: number, b: number) => {
+  // Apply gamma correction (sRGB to linear)
+  const linearR = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92
+  const linearG = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92
+  const linearB = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92
 
-  x = x / 95.047
-  y = y / 100
-  z = z / 108.883
+  // Convert to XYZ using sRGB matrix (D65 illuminant)
+  const x = linearR * 0.4124564 + linearG * 0.3575761 + linearB * 0.1804375
+  const y = linearR * 0.2126729 + linearG * 0.7151522 + linearB * 0.0721750
+  const z = linearR * 0.0193339 + linearG * 0.1191920 + linearB * 0.9503041
 
-  const [xn, yn, zn] = [x, y, z].map((val) => {
-    return val > 0.008856 ? Math.pow(val, 1 / 3) : 7.787 * val + 16 / 116
-  })
+  return { x, y, z }
+}
 
-  const l = 116 * yn - 16
-  const a = 500 * (xn - yn)
-  const b_val = 200 * (yn - zn)
+// Convert XYZ to Lab
+export const xyzToLab = (x: number, y: number, z: number) => {
+  // D65 reference white
+  const refX = 0.95047
+  const refY = 1.0
+  const refZ = 1.08883
+
+  let xr = x / refX
+  let yr = y / refY
+  let zr = z / refZ
+
+  const epsilon = 0.008856
+  const kappa = 903.3
+
+  const fx = xr > epsilon ? Math.pow(xr, 1/3) : (kappa * xr + 16) / 116
+  const fy = yr > epsilon ? Math.pow(yr, 1/3) : (kappa * yr + 16) / 116
+  const fz = zr > epsilon ? Math.pow(zr, 1/3) : (kappa * zr + 16) / 116
+
+  const l = 116 * fy - 16
+  const a = 500 * (fx - fy)
+  const b_val = 200 * (fy - fz)
 
   return { l, a, b: b_val }
+}
+
+// Convert RGB to Lab (intermediate step for HCL)
+export const rgbToLab = (r: number, g: number, b: number) => {
+  const xyz = rgbToXyz(r, g, b)
+  return xyzToLab(xyz.x, xyz.y, xyz.z)
 }
 
 // Convert Lab to HCL
@@ -97,6 +121,110 @@ export const labToHcl = (l: number, a: number, b: number) => {
     c: Math.round(c),
     l: Math.round(l),
   }
+}
+
+// Convert HCL to Lab
+export const hclToLab = (h: number, c: number, l: number) => {
+  const hRad = (h * Math.PI) / 180
+  const a = c * Math.cos(hRad)
+  const b = c * Math.sin(hRad)
+  return { l, a, b }
+}
+
+// Convert Lab to XYZ
+export const labToXyz = (l: number, a: number, b: number) => {
+  // D65 reference white
+  const refX = 0.95047
+  const refY = 1.0
+  const refZ = 1.08883
+
+  const epsilon = 0.008856
+  const kappa = 903.3
+
+  const fy = (l + 16) / 116
+  const fx = a / 500 + fy
+  const fz = fy - b / 200
+
+  const xr = Math.pow(fx, 3) > epsilon ? Math.pow(fx, 3) : (116 * fx - 16) / kappa
+  const yr = l > kappa * epsilon ? Math.pow((l + 16) / 116, 3) : l / kappa
+  const zr = Math.pow(fz, 3) > epsilon ? Math.pow(fz, 3) : (116 * fz - 16) / kappa
+
+  return {
+    x: xr * refX,
+    y: yr * refY,
+    z: zr * refZ
+  }
+}
+
+// Convert XYZ to RGB
+export const xyzToRgb = (x: number, y: number, z: number) => {
+  // XYZ to linear RGB (D65, sRGB)
+  let r = x * 3.2404542 + y * -1.5371385 + z * -0.4985314
+  let g = x * -0.9692660 + y * 1.8760108 + z * 0.0415560
+  let bVal = x * 0.0556434 + y * -0.2040259 + z * 1.0572252
+
+  // Apply gamma correction (linear to sRGB)
+  r = r > 0.0031308 ? 1.055 * Math.pow(r, 1 / 2.4) - 0.055 : 12.92 * r
+  g = g > 0.0031308 ? 1.055 * Math.pow(g, 1 / 2.4) - 0.055 : 12.92 * g
+  bVal = bVal > 0.0031308 ? 1.055 * Math.pow(bVal, 1 / 2.4) - 0.055 : 12.92 * bVal
+
+  return {
+    r: Math.max(0, Math.min(1, r)),
+    g: Math.max(0, Math.min(1, g)),
+    b: Math.max(0, Math.min(1, bVal)),
+  }
+}
+
+// Convert Lab to RGB
+export const labToRgb = (l: number, a: number, b: number) => {
+  const xyz = labToXyz(l, a, b)
+  return xyzToRgb(xyz.x, xyz.y, xyz.z)
+}
+
+// Convert RGB to Hex
+export const rgbToHex = (r: number, g: number, b: number): string => {
+  const toHex = (val: number) => {
+    const hex = Math.round(val * 255).toString(16)
+    return hex.length === 1 ? '0' + hex : hex
+  }
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+// Convert HCL to Hex
+export const hclToHex = (h: number, c: number, l: number): string => {
+  const lab = hclToLab(h, c, l)
+  const rgb = labToRgb(lab.l, lab.a, lab.b)
+  return rgbToHex(rgb.r, rgb.g, rgb.b)
+}
+
+// Generate hue variations (keeping chroma and lightness constant)
+export const generateHueScale = (chroma: number, lightness: number, steps: number = 12): string[] => {
+  const colors: string[] = []
+  for (let i = 0; i < steps; i++) {
+    const hue = (i / steps) * 360
+    colors.push(hclToHex(hue, chroma, lightness))
+  }
+  return colors
+}
+
+// Generate chroma variations (keeping hue and lightness constant)
+export const generateChromaScale = (hue: number, lightness: number, maxChroma: number = 100, steps: number = 10): string[] => {
+  const colors: string[] = []
+  for (let i = 0; i <= steps; i++) {
+    const chroma = (i / steps) * maxChroma
+    colors.push(hclToHex(hue, chroma, lightness))
+  }
+  return colors
+}
+
+// Get HCL values from hex (precise, not rounded)
+export const getHclFromHex = (hex: string): { h: number; c: number; l: number } => {
+  const rgb = hexToRgb(hex)
+  const lab = rgbToLab(rgb.r, rgb.g, rgb.b)
+  const c = Math.sqrt(lab.a * lab.a + lab.b * lab.b)
+  let h = Math.atan2(lab.b, lab.a) * (180 / Math.PI)
+  if (h < 0) h += 360
+  return { h, c, l: lab.l }
 }
 
 // Get color properties from hex

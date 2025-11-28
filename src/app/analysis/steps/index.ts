@@ -19,7 +19,6 @@ export {
   SliderStepComponent,
   ProfundidadeComparisonComponent,
   GeralSummaryComponent,
-  ComparisonRowComponent,
   SliderWithAverageMarker,
 } from './pigment-analysis'
 

@@ -4,7 +4,18 @@ export {
   rgbToHsl,
   rgbToHsv,
   rgbToLab,
+  rgbToXyz,
+  xyzToLab,
   labToHcl,
+  hclToLab,
+  labToXyz,
+  xyzToRgb,
+  labToRgb,
+  rgbToHex,
+  hclToHex,
+  generateHueScale,
+  generateChromaScale,
+  getHclFromHex,
   getColorProperties,
 } from './colorConversion'
 

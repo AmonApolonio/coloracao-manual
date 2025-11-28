@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Card, Typography, Empty, Steps } from 'antd'
+import { Card, Typography, Empty, Steps, Button, Modal, Input, App } from 'antd'
+import { AimOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 import { SVGVectorData } from '@/lib/types'
 import { PigmentTemperatureDataUI, ProfundidadeComparisonUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
 import { PigmentAnalysisDataDB, COMPARISON_FIELD_NAMES } from '@/lib/types-db'
 import { convertUIToDB, convertDBToUI } from '@/lib/pigment-conversion'
-import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS } from '../shared/PigmentAnalysisUtils'
+import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateTemperaturaPosition, calculateIntensidadePosition, calculateProfundidadePosition } from '../shared/PigmentAnalysisUtils'
 import { SliderStepComponent } from './components/SliderStepComponent'
 import { ProfundidadeComparisonComponent } from './components/ProfundidadeComparisonComponent'
 import { GeralSummaryComponent } from './components/GeralSummaryComponent'
@@ -34,6 +35,12 @@ export default function PigmentAnalysisStep({
   const [extractedColors, setExtractedColors] = useState<{
     [key: string]: string
   }>({})
+
+  const [rangesLocked, setRangesLocked] = useState<boolean>(true)
+  const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false)
+  const [passwordInput, setPasswordInput] = useState<string>('')
+  const hasAdminPassword = !!process.env.NEXT_PUBLIC_ADMIN_PASSWORD
+  const { message } = App.useApp()
 
   const [analysisData, setAnalysisData] = useState<PigmentAnalysisDataUI>({
     temperatura: {},
@@ -216,6 +223,86 @@ export default function PigmentAnalysisStep({
     }))
   }
 
+  // Auto-fill all sliders with calculated values from the color scales
+  const handleAutoFill = () => {
+    if (isReadOnly) return
+
+    const stepKey = ANALYSIS_STEPS[currentSubStep].key
+
+    if (stepKey === 'temperatura') {
+      // Auto-fill temperatura values
+      setAnalysisData((prev) => {
+        const temperaturaData = { ...prev.temperatura }
+        Object.keys(extractedColors).forEach((field) => {
+          const value = calculateTemperaturaPosition(extractedColors[field], field)
+          const category = getLabelCategory(value, 'temperatura')
+          temperaturaData[field] = {
+            hexColor: extractedColors[field],
+            temperature: value,
+            temperatureCategory: category,
+          }
+        })
+        return { ...prev, temperatura: temperaturaData }
+      })
+    } else if (stepKey === 'intensidade') {
+      // Auto-fill intensidade values
+      setAnalysisData((prev) => {
+        const intensidadeData = { ...prev.intensidade }
+        Object.keys(extractedColors).forEach((field) => {
+          const value = calculateIntensidadePosition(extractedColors[field], field)
+          const category = getLabelCategory(value, 'intensidade')
+          intensidadeData[field] = {
+            hexColor: extractedColors[field],
+            temperature: value,
+            temperatureCategory: category,
+          }
+        })
+        return { ...prev, intensidade: intensidadeData }
+      })
+    } else if (stepKey === 'profundidade') {
+      // Auto-fill profundidade values
+      setAnalysisData((prev) => {
+        const profundidadeData = [...(prev.profundidade as ProfundidadeComparisonUI[])]
+        profundidadeData.forEach((comparison, index) => {
+          const value = calculateProfundidadePosition(
+            comparison.colors1,
+            comparison.colors2,
+            extractedColors,
+            comparison.field
+          )
+          const category = getLabelCategory(value, 'profundidade')
+          profundidadeData[index] = {
+            ...profundidadeData[index],
+            value,
+            category,
+          }
+        })
+        return { ...prev, profundidade: profundidadeData }
+      })
+    }
+  }
+
+  const handleLockToggle = () => {
+    if (rangesLocked && hasAdminPassword) {
+      setPasswordModalOpen(true)
+      setPasswordInput('')
+    } else if (!rangesLocked) {
+      setRangesLocked(true)
+    }
+  }
+
+  const handlePasswordSubmit = () => {
+    if (passwordInput === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
+      setRangesLocked(false)
+      setPasswordModalOpen(false)
+      setPasswordInput('')
+      message.success('Escalas desbloqueadas')
+    } else {
+      message.error('Senha incorreta')
+      setPasswordInput('')
+    }
+  }
+
   const extractedColorFields = COLOR_FIELDS.filter(
     (field) => field.value in extractedColors
   )
@@ -237,7 +324,8 @@ export default function PigmentAnalysisStep({
   const currentStepKey = ANALYSIS_STEPS[currentSubStep].key
 
   return (
-    <Card className="border-secondary border-2 rounded-xl">
+    <App>
+      <Card className="border-secondary border-2 rounded-xl">
       {isReadOnly && (
         <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded mb-4">
           🔒 Modo visualização - Esta análise já foi concluída
@@ -261,9 +349,31 @@ export default function PigmentAnalysisStep({
       </div>
 
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-secondary mb-2">
-          {ANALYSIS_STEPS[currentSubStep].title}
-        </h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-2xl font-bold text-secondary">
+            {ANALYSIS_STEPS[currentSubStep].title}
+          </h2>
+          <div className="flex items-center gap-2">
+            {currentSubStep < 3 && !isReadOnly && (
+              <Button
+                type="default"
+                icon={<AimOutlined />}
+                onClick={handleAutoFill}
+                size="middle"
+              >
+                Auto-preencher
+              </Button>
+            )}
+            {currentSubStep < 3 && !isReadOnly && hasAdminPassword && (
+              <Button
+                type="text"
+                icon={rangesLocked ? <LockOutlined /> : <UnlockOutlined />}
+                onClick={handleLockToggle}
+                title={rangesLocked ? "Clique para desbloquear as escalas" : "Clique para bloquear as escalas"}
+              />
+            )}
+          </div>
+        </div>
         <Paragraph type="secondary">
           {currentSubStep === 2
             ? 'Classifique a profundidade comparando os tons de cores relacionadas. Mova o controle deslizante para atualizar o valor de cada comparação.'
@@ -278,6 +388,7 @@ export default function PigmentAnalysisStep({
           data={(analysisData.profundidade as ProfundidadeComparisonUI[]) || []}
           onComparisonChange={handleProfundidadeComparisonChange}
           isReadOnly={isReadOnly}
+          rangesLocked={rangesLocked}
         />
       ) : currentSubStep === 3 ? (
         <GeralSummaryComponent
@@ -298,8 +409,33 @@ export default function PigmentAnalysisStep({
           }
           onValueChange={handleStepValueChange}
           isReadOnly={isReadOnly}
+          rangesLocked={rangesLocked}
         />
       )}
-    </Card>
+
+      {/* Password Modal for Unlocking Ranges */}
+      <Modal
+        title="Desbloquear Escalas"
+        open={passwordModalOpen}
+        onOk={handlePasswordSubmit}
+        onCancel={() => {
+          setPasswordModalOpen(false)
+          setPasswordInput('')
+        }}
+        okText="Desbloquear"
+        cancelText="Cancelar"
+        centered
+        width={320}
+      >
+        <Input.Password
+          placeholder="Digite a senha"
+          value={passwordInput}
+          onChange={(e) => setPasswordInput(e.target.value)}
+          onPressEnter={handlePasswordSubmit}
+          autoFocus
+        />
+      </Modal>
+      </Card>
+    </App>
   )
 }

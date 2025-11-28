@@ -1,7 +1,8 @@
 'use client'
 
-import { use, useRef, useState } from 'react'
-import { Layout, Card, Spin } from 'antd'
+import { use, useRef, useState, useEffect } from 'react'
+import { notFound } from 'next/navigation'
+import { Layout, Spin } from 'antd'
 import { ColorSeason } from '@/lib/types-db'
 import { type InteractiveColorExtractionStepHandle } from '../steps/color-extraction/InteractiveColorExtractionStep'
 import { useAnalysisData, useAnalysisSave } from './hooks'
@@ -59,22 +60,19 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
     isReadOnly,
   })
 
-  if (loading) {
+  // Trigger 404 page when analysis is not found after loading completes
+  useEffect(() => {
+    if (!loading && (!user || !analysis)) {
+      notFound()
+    }
+  }, [loading, user, analysis])
+
+  if (loading || !user || !analysis) {
     return (
       <Layout className="min-h-screen bg-background">
         <div className="absolute inset-0 bg-white/50 rounded-lg flex items-center justify-center z-10">
           <Spin size="large" />
         </div>
-      </Layout>
-    )
-  }
-
-  if (!user || !analysis) {
-    return (
-      <Layout className="min-h-screen bg-background">
-        <Content className="p-8">
-          <Card>Análise não encontrada</Card>
-        </Content>
       </Layout>
     )
   }

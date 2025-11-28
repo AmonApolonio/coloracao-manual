@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Slider, Tag, Tooltip, Typography } from 'antd'
+import { Slider, Tag, Typography } from 'antd'
 import { ProfundidadeComparisonUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl, getColorProperties } from '../../shared/colorConversion'
-import { COLOR_FIELDS, getLabelColor } from '../../shared/PigmentAnalysisUtils'
+import { COLOR_FIELDS, getLabelColor, DEFAULT_RANGES } from '../../shared/PigmentAnalysisUtils'
+import { ContrastScaleWithMarker } from './ContrastScaleWithMarker'
 
 const { Text } = Typography
 
@@ -13,6 +14,7 @@ interface ProfundidadeComparisonComponentProps {
   data: ProfundidadeComparisonUI[]
   onComparisonChange: (index: number, value: number) => void
   isReadOnly?: boolean
+  rangesLocked?: boolean
 }
 
 const getDesaturatedColor = (hex: string): string => {
@@ -108,8 +110,36 @@ export const ProfundidadeComparisonComponent = ({
   data,
   onComparisonChange,
   isReadOnly,
+  rangesLocked,
 }: ProfundidadeComparisonComponentProps) => {
   const [hoveredColor, setHoveredColor] = useState<string | null>(null)
+
+  // State for contrast ranges per comparison
+  const [contrastRanges, setContrastRanges] = useState<{ [key: number]: { min: number; max: number } }>({})
+
+  const getContrastRange = (index: number, comparisonField?: string) => {
+    if (contrastRanges[index]) {
+      return contrastRanges[index]
+    }
+    // Use field-specific range from shared config, fallback to default
+    if (comparisonField && comparisonField in DEFAULT_RANGES.contrast) {
+      const fieldRange = DEFAULT_RANGES.contrast[comparisonField as keyof typeof DEFAULT_RANGES.contrast]
+      if (fieldRange && typeof fieldRange === 'object' && 'min' in fieldRange && 'max' in fieldRange) {
+        return fieldRange as { min: number; max: number }
+      }
+    }
+    return DEFAULT_RANGES.contrast.default
+  }
+
+  const updateContrastRange = (index: number, field: 'min' | 'max', value: number) => {
+    setContrastRanges(prev => ({
+      ...prev,
+      [index]: {
+        ...getContrastRange(index),
+        [field]: value
+      }
+    }))
+  }
 
   return (
     <div className="space-y-8">
@@ -124,14 +154,10 @@ export const ProfundidadeComparisonComponent = ({
         )
 
         // Use division for ratio: target/reference (Group2/Group1)
-        const hsvContrast =
-          group1Props.hsv !== 0
-            ? (group2Props.hsv / group1Props.hsv).toFixed(2)
-            : '0.00'
-        const hclContrast =
-          group1Props.hcl !== 0
-            ? (group2Props.hcl / group1Props.hcl).toFixed(2)
-            : '0.00'
+        const hclContrastNum = group1Props.hcl !== 0 ? group2Props.hcl / group1Props.hcl : 0
+        const hclContrast = hclContrastNum.toFixed(2)
+
+        const contrastRange = getContrastRange(index, comparison.field)
 
         const hclTooltip = (
           <div className="text-xs space-y-1">
@@ -156,33 +182,6 @@ export const ProfundidadeComparisonComponent = ({
 
             <div className="mt-2 border-t border-gray-400 pt-1 font-semibold">
               Proporção: {group2Props.hcl} ÷ {group1Props.hcl} = {hclContrast}
-            </div>
-          </div>
-        )
-
-        const hsvTooltip = (
-          <div className="text-xs space-y-1">
-            <div className="font-semibold mb-2">Valor (HSV)</div>
-            <div>Grupo 1: {group1Props.details.fieldLabels?.join(', ')}</div>
-            {group1Props.details.hsvValues?.map((val, i) => (
-              <div key={`g1-${i}`} className="text-xs ml-2">
-                {group1Props.details.fieldLabels?.[i]}: {val}%
-              </div>
-            ))}
-            <div className="mt-1">Média Grupo 1: {group1Props.hsv}%</div>
-
-            <div className="mt-2 border-t border-gray-400 pt-1">
-              Grupo 2: {group2Props.details.fieldLabels?.join(', ')}
-            </div>
-            {group2Props.details.hsvValues?.map((val, i) => (
-              <div key={`g2-${i}`} className="text-xs ml-2">
-                {group2Props.details.fieldLabels?.[i]}: {val}%
-              </div>
-            ))}
-            <div className="mt-1">Média Grupo 2: {group2Props.hsv}%</div>
-
-            <div className="mt-2 border-t border-gray-400 pt-1 font-semibold">
-              Proporção: {group2Props.hsv}% ÷ {group1Props.hsv}% = {hsvContrast}
             </div>
           </div>
         )
@@ -217,29 +216,18 @@ export const ProfundidadeComparisonComponent = ({
                 </Text>
               </div>
 
-              {/* HCL Lightness Contrast Column */}
-              <Tooltip title={hclTooltip} color="#fff">
-                <div className="flex flex-col cursor-help">
-                  <Text type="secondary" className="text-xs mb-2">
-                    Luminosidade (HCL)
-                  </Text>
-                  <Text code className="text-base hover:text-blue-500">
-                    {hclContrast}*
-                  </Text>
-                </div>
-              </Tooltip>
-
-              {/* HSV Value Contrast Column */}
-              <Tooltip title={hsvTooltip} color="#fff">
-                <div className="flex flex-col cursor-help">
-                  <Text type="secondary" className="text-xs mb-2">
-                    Valor (HSV)
-                  </Text>
-                  <Text code className="text-base hover:text-blue-500">
-                    {hsvContrast}%
-                  </Text>
-                </div>
-              </Tooltip>
+              {/* Contrast Scale */}
+              <ContrastScaleWithMarker
+                contrastValue={hclContrastNum}
+                rangeMin={contrastRange.min}
+                rangeMax={contrastRange.max}
+                onRangeMinChange={(val) => updateContrastRange(index, 'min', val)}
+                onRangeMaxChange={(val) => updateContrastRange(index, 'max', val)}
+                baseColor={group1Props.hcl}
+                isReadOnly={isReadOnly}
+                rangesLocked={rangesLocked}
+                tooltipContent={hclTooltip}
+              />
             </div>
 
             {/* Color Comparison Grid */}

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
 import { fetchAnalysisById, fetchUserById } from '@/lib/supabase'
 import { User, Analysis, SVGVectorData } from '@/lib/types'
@@ -31,7 +30,6 @@ interface UseAnalysisDataReturn {
 }
 
 export function useAnalysisData(analysisId: string): UseAnalysisDataReturn {
-  const router = useRouter()
   const { message } = AntdApp.useApp()
   
   const [user, setUser] = useState<User | null>(null)
@@ -87,8 +85,8 @@ export function useAnalysisData(analysisId: string): UseAnalysisDataReturn {
         const analysisData = await fetchAnalysisById(analysisId)
 
         if (!analysisData) {
-          message.error('Análise não encontrada')
-          router.push('/')
+          // Let the page component handle the not found state
+          setLoading(false)
           return
         }
 
@@ -122,7 +120,7 @@ export function useAnalysisData(analysisId: string): UseAnalysisDataReturn {
     }
 
     loadData()
-  }, [analysisId, message, router])
+  }, [analysisId, message])
 
   return {
     user,
