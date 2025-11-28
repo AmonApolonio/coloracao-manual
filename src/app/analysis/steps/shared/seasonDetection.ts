@@ -17,7 +17,7 @@ export type SeasonResult = {
 export function detectSeason(
   temperatura: 'fria' | 'quente' | null,
   intensidade: 'suave' | 'brilhante' | null,
-  profundidade: 'escura' | 'clara' | null
+  profundidade: 'escuro' | 'claro' | null
 ): SeasonResult {
   // Check if all selections are made
   if (!temperatura || !intensidade || !profundidade) {
@@ -26,10 +26,10 @@ export function detectSeason(
 
   // Valid combinations mapping (using the actual Portuguese forms from the UI)
   const validCombinations: Record<string, { season: Season; variant: SeasonVariant }> = {
-    'quente-brilhante-clara': { season: 'Primavera', variant: 'Brilhante' },
-    'quente-suave-escura': { season: 'Outono', variant: 'Quente' },
-    'fria-suave-clara': { season: 'Verão', variant: 'Frio' },
-    'fria-brilhante-escura': { season: 'Inverno', variant: 'Frio' },
+    'quente-brilhante-claro': { season: 'Primavera', variant: 'Brilhante' },
+    'quente-suave-escuro': { season: 'Outono', variant: 'Quente' },
+    'fria-suave-claro': { season: 'Verão', variant: 'Frio' },
+    'fria-brilhante-escuro': { season: 'Inverno', variant: 'Frio' },
   }
 
   const key = `${temperatura}-${intensidade}-${profundidade}`
@@ -61,10 +61,10 @@ function generateSuggestions(
 ): string[] {
   // Valid combinations and their requirements (using actual Portuguese forms: fria, not frio)
   const validCombinations = [
-    { season: 'Primavera', temp: 'quente', tempLabel: 'Quente', intens: 'brilhante', intensLabel: 'Brilhante', prof: 'clara', profLabel: 'Clara' },
-    { season: 'Outono', temp: 'quente', tempLabel: 'Quente', intens: 'suave', intensLabel: 'Suave', prof: 'escura', profLabel: 'Escura' },
-    { season: 'Verão', temp: 'fria', tempLabel: 'Fria', intens: 'suave', intensLabel: 'Suave', prof: 'clara', profLabel: 'Clara' },
-    { season: 'Inverno', temp: 'fria', tempLabel: 'Fria', intens: 'brilhante', intensLabel: 'Brilhante', prof: 'escura', profLabel: 'Escura' },
+    { season: 'Primavera', temp: 'quente', tempLabel: 'Quente', intens: 'brilhante', intensLabel: 'Brilhante', prof: 'claro', profLabel: 'Claro' },
+    { season: 'Outono', temp: 'quente', tempLabel: 'Quente', intens: 'suave', intensLabel: 'Suave', prof: 'escuro', profLabel: 'Escuro' },
+    { season: 'Verão', temp: 'fria', tempLabel: 'Fria', intens: 'suave', intensLabel: 'Suave', prof: 'claro', profLabel: 'Claro' },
+    { season: 'Inverno', temp: 'fria', tempLabel: 'Fria', intens: 'brilhante', intensLabel: 'Brilhante', prof: 'escuro', profLabel: 'Escuro' },
   ]
 
   // Calculate how many changes needed for each season
@@ -225,10 +225,10 @@ export function detectSeasonFromSliders(
 
   // Valid season combinations
   const SEASON_COMBINATIONS = [
-    { season: 'Primavera', temp: 'quente', intens: 'brilhante', prof: 'clara' },
-    { season: 'Outono', temp: 'quente', intens: 'suave', prof: 'escura' },
-    { season: 'Verão', temp: 'fria', intens: 'suave', prof: 'clara' },
-    { season: 'Inverno', temp: 'fria', intens: 'brilhante', prof: 'escura' },
+    { season: 'Primavera', temp: 'quente', intens: 'brilhante', prof: 'claro' },
+    { season: 'Outono', temp: 'quente', intens: 'suave', prof: 'escuro' },
+    { season: 'Verão', temp: 'fria', intens: 'suave', prof: 'claro' },
+    { season: 'Inverno', temp: 'fria', intens: 'brilhante', prof: 'escuro' },
   ]
 
   // Calculate distances from center (50) for each attribute
@@ -246,7 +246,7 @@ export function detectSeasonFromSliders(
   const attributeMap: { [key: string]: { left: string; right: string } } = {
     temperatura: { left: 'fria', right: 'quente' },
     intensidade: { left: 'suave', right: 'brilhante' },
-    profundidade: { left: 'escura', right: 'clara' },
+    profundidade: { left: 'escuro', right: 'claro' },
   }
 
   // Get the values for the 2 most extreme attributes

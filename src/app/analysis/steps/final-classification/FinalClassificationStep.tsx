@@ -153,7 +153,7 @@ export const FinalClassificationStep = ({
                     {maskAnalysisData.intensidade === 'brilhante' ? '✨ Brilhante' : '🌙 Suave'}
                   </Tag>
                   <Tag color="blue" className="text-xs">
-                    {maskAnalysisData.profundidade === 'clara' ? '☀️ Clara' : '🌑 Escura'}
+                    {maskAnalysisData.profundidade === 'claro' ? '☀️ Claro' : '🌑 Escuro'}
                   </Tag>
                 </div>
 

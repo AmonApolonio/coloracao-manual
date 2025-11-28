@@ -41,8 +41,8 @@ interface MaskComparison {
   title: string
   leftLabel: string
   rightLabel: string
-  leftValue: 'fria' | 'suave' | 'escura' | 'prata'
-  rightValue: 'quente' | 'brilhante' | 'clara' | 'ouro'
+  leftValue: 'fria' | 'suave' | 'escuro' | 'prata'
+  rightValue: 'quente' | 'brilhante' | 'claro' | 'ouro'
   leftColors?: string[]
   rightColors?: string[]
   leftGradient?: GradientConfig
@@ -95,20 +95,20 @@ const MASK_COMPARISONS: MaskComparison[] = [
   {
     id: 'profundidade',
     title: 'Profundidade',
-    leftLabel: 'Escura',
-    rightLabel: 'Clara',
-    leftValue: 'escura',
-    rightValue: 'clara',
+    leftLabel: 'Escuro',
+    rightLabel: 'Claro',
+    leftValue: 'escuro',
+    rightValue: 'claro',
     leftColors: PROFUNDIDADE_ESCURA_COLORS,
     rightColors: PROFUNDIDADE_CLARA_COLORS,
   },
   {
     id: 'profundidade2',
     title: 'Profundidade (2)',
-    leftLabel: 'Escura',
-    rightLabel: 'Clara',
-    leftValue: 'escura',
-    rightValue: 'clara',
+    leftLabel: 'Escuro',
+    rightLabel: 'Claro',
+    leftValue: 'escuro',
+    rightValue: 'claro',
     leftColors: PROFUNDIDADE_ESCURA_COLORS2,
     rightColors: PROFUNDIDADE_CLARA_COLORS2,
   },
@@ -118,7 +118,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
   const [sharedFacePosition, setSharedFacePosition] = useState<FacePositionData>(
     savedData?.facePosition || { x: 160, y: 240, scale: 1 }
   )
-  const [selectedMasks, setSelectedMasks] = useState<{ [key: string]: 'fria' | 'quente' | 'suave' | 'brilhante' | 'escura' | 'clara' | 'ouro' | 'prata' | null }>({
+  const [selectedMasks, setSelectedMasks] = useState<{ [key: string]: 'fria' | 'quente' | 'suave' | 'brilhante' | 'escuro' | 'claro' | 'ouro' | 'prata' | null }>({
     temperatura: savedData?.temperatura ?? null,
     temperatura2: savedData?.temperatura ?? null,
     intensidade: savedData?.intensidade ?? null,
@@ -134,7 +134,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
   const seasonResult = detectSeason(
     selectedMasks.temperatura as 'fria' | 'quente' | null,
     selectedMasks.intensidade as 'suave' | 'brilhante' | null,
-    selectedMasks.profundidade as 'escura' | 'clara' | null
+    selectedMasks.profundidade as 'escuro' | 'claro' | null
   )
 
   // Emit data changes to parent - only emit primary temperature and profundidade
@@ -143,7 +143,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
     onDataChange?.({
       temperatura: selectedMasks.temperatura as 'fria' | 'quente' | null,
       intensidade: selectedMasks.intensidade as 'suave' | 'brilhante' | null,
-      profundidade: selectedMasks.profundidade as 'escura' | 'clara' | null,
+      profundidade: selectedMasks.profundidade as 'escuro' | 'claro' | null,
       subtom: selectedMasks.subtom as 'ouro' | 'prata' | null,
       colorSeason: selectedSeason,
       facePosition: sharedFacePosition,
@@ -154,7 +154,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
     setSharedFacePosition(data)
   }, [])
 
-  const handleMaskSelection = useCallback((comparisonId: string, value: 'fria' | 'quente' | 'suave' | 'brilhante' | 'escura' | 'clara' | 'ouro' | 'prata') => {
+  const handleMaskSelection = useCallback((comparisonId: string, value: 'fria' | 'quente' | 'suave' | 'brilhante' | 'escuro' | 'claro' | 'ouro' | 'prata') => {
     if (isReadOnly) return
     
     setSelectedMasks((prev) => {

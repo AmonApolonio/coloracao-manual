@@ -49,7 +49,7 @@ export interface PigmentAnalysisDataDB {
 export interface MaskAnalysisDataDB {
   temperatura: 'fria' | 'quente' | null;
   intensidade: 'suave' | 'brilhante' | null;
-  profundidade: 'escura' | 'clara' | null;
+  profundidade: 'escuro' | 'claro' | null;
   subtom: 'ouro' | 'prata' | null;
   colorSeason?: ColorSeason | null;
   facePosition: {

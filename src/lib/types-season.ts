@@ -9,7 +9,7 @@
 export type Season = 'Primavera' | 'Outono' | 'Verão' | 'Inverno';
 
 // Season variants
-export type SeasonVariant = 'Brilhante' | 'Clara' | 'Claro' | 'Quente' | 'Suave' | 'Escuro' | 'Frio';
+export type SeasonVariant = 'Brilhante' | 'Claro' | 'Claro' | 'Quente' | 'Suave' | 'Escuro' | 'Frio';
 
 // Complete season combinations (Season + Variant)
 export type ColorSeason =
@@ -32,7 +32,7 @@ export type ColorSeason =
  * Maps each season to its valid variants
  */
 export const SEASON_VARIANTS: Record<Season, SeasonVariant[]> = {
-  Primavera: ['Brilhante', 'Clara', 'Quente'],
+  Primavera: ['Brilhante', 'Claro', 'Quente'],
   Outono: ['Quente', 'Suave', 'Escuro'],
   Verão: ['Frio', 'Suave', 'Claro'],
   Inverno: ['Frio', 'Brilhante', 'Escuro'],
