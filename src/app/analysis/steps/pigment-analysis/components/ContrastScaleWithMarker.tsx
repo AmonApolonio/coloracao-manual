@@ -167,7 +167,7 @@ export const ContrastScaleWithMarker = ({
                 transform: 'translateX(-50%)'
               }}
             >
-              <div className="w-1 h-full bg-red-500 border border-white" />
+              <div className="w-2 h-full bg-red-500 border-y-0 border-x-[2px] border-white" />
               {isAdmin && (
                 <div
                   className="absolute bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap cursor-help"

@@ -89,7 +89,7 @@ export const ColorScaleWithMarker = ({
               transform: 'translateX(-50%)'
             }}
           >
-            <div className="w-0.5 h-full bg-black" />
+            <div className="w-2 h-full bg-red-500 border-y-0 border-x-[2px] border-white" />
             {isAdmin && (
               <Tooltip
                 title={`Valor: ${actualValue}`}
