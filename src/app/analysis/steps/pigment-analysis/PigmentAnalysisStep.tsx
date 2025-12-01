@@ -371,7 +371,7 @@ export default function PigmentAnalysisStep({
             {ANALYSIS_STEPS[currentSubStep].title}
           </h2>
           <div className="flex items-center gap-2">
-            {currentSubStep < 3 && !isReadOnly && (
+            {currentSubStep < 3 && !isReadOnly && isAdmin && (
               <Button
                 type="default"
                 icon={<AimOutlined />}
