@@ -406,6 +406,7 @@ export default function PigmentAnalysisStep({
           onComparisonChange={handleProfundidadeComparisonChange}
           isReadOnly={isReadOnly}
           rangesLocked={rangesLocked}
+          isAdmin={isAdmin}
         />
       ) : currentSubStep === 3 ? (
         <GeralSummaryComponent
@@ -427,6 +428,7 @@ export default function PigmentAnalysisStep({
           onValueChange={handleStepValueChange}
           isReadOnly={isReadOnly}
           rangesLocked={rangesLocked}
+          isAdmin={isAdmin}
         />
       )}
 

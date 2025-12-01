@@ -15,6 +15,7 @@ interface ProfundidadeComparisonComponentProps {
   onComparisonChange: (index: number, value: number) => void
   isReadOnly?: boolean
   rangesLocked?: boolean
+  isAdmin?: boolean
 }
 
 const getDesaturatedColor = (hex: string): string => {
@@ -163,6 +164,7 @@ export const ProfundidadeComparisonComponent = ({
   onComparisonChange,
   isReadOnly,
   rangesLocked,
+  isAdmin,
 }: ProfundidadeComparisonComponentProps) => {
   const [hoveredColor, setHoveredColor] = useState<string | null>(null)
 
@@ -270,15 +272,16 @@ export const ProfundidadeComparisonComponent = ({
 
               {/* Contrast Scale */}
               <ContrastScaleWithMarker
-                contrastValue={hclContrastNum}
+                group1Props={group1Props}
+                group2Props={group2Props}
                 rangeMin={contrastRange.min}
                 rangeMax={contrastRange.max}
                 onRangeMinChange={(val) => updateContrastRange(index, 'min', val)}
                 onRangeMaxChange={(val) => updateContrastRange(index, 'max', val)}
-                baseColor={group1Props.hcl}
                 isReadOnly={isReadOnly}
                 rangesLocked={rangesLocked}
                 tooltipContent={hclTooltip}
+                isAdmin={isAdmin}
               />
             </div>
 

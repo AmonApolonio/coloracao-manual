@@ -5,103 +5,139 @@ import { Tooltip, Typography, InputNumber } from 'antd'
 
 const { Text } = Typography
 
+interface ColorProps {
+  hcl: number
+  hsv: number
+  details: {
+    hclValues: number[]
+    hsvValues: number[]
+    fieldLabels: string[]
+  }
+}
+
 interface ContrastScaleWithMarkerProps {
-  contrastValue: number
+  group1Props: ColorProps // Target color (variable below)
+  group2Props: ColorProps // Reference/base color (fixed at top)
   rangeMin: number
   rangeMax: number
   onRangeMinChange: (value: number) => void
   onRangeMaxChange: (value: number) => void
-  baseColor: number // Base lightness (0-100)
   isReadOnly?: boolean
   rangesLocked?: boolean
   tooltipContent?: React.ReactNode
+  isAdmin?: boolean
 }
 
 export const ContrastScaleWithMarker = ({
-  contrastValue,
+  group1Props,
+  group2Props,
   rangeMin,
   rangeMax,
   onRangeMinChange,
   onRangeMaxChange,
-  baseColor,
   isReadOnly,
   rangesLocked,
-  tooltipContent
+  tooltipContent,
+  isAdmin
 }: ContrastScaleWithMarkerProps) => {
   const steps = 15
 
-  // Generate contrast scale showing what different ratios look like (REVERSED: high contrast on left, low contrast on right)
+  // Base color from group2 (fixed reference)
+  const baseGroup2Lightness = group2Props.hcl
+
+  // Target color from group1 (will vary to show contrast)
+  const targetGroup1Lightness = group1Props.hcl
+
+  // Generate contrast scale pairs
+  // The scale uses the range values to show what contrast ratios look like
+  // At rangeMin: group2 / group1 = rangeMin
+  // At rangeMax: group2 / group1 = rangeMax
   const generateContrastPairs = () => {
-    const pairs: { ratio: number; baseLightness: number; targetLightness: number }[] = []
+    const pairs: {
+      ratio: number
+      group2Lightness: number
+      group1Lightness: number
+    }[] = []
+
     for (let i = 0; i <= steps; i++) {
       const t = i / steps
-      // Reverse: go from rangeMax to rangeMin
-      const ratio = rangeMax - t * (rangeMax - rangeMin)
-      // Use a reference base lightness (like typical iris ~25-30)
-      const baseLightness = baseColor > 0 ? baseColor : 25
-      // Target lightness = base * ratio (clamped to 100)
-      const targetLightness = Math.min(baseLightness * ratio, 100)
-      pairs.push({ ratio, baseLightness, targetLightness })
+      // Go from rangeMin to rangeMax for the visible range
+      const ratio = rangeMin + t * (rangeMax - rangeMin)
+
+      // Group2 stays fixed (reference)
+      const group2Lightness = baseGroup2Lightness
+
+      // Group1 is calculated from the contrast formula: group2 / group1 = ratio
+      // Therefore: group1 = group2 / ratio
+      const group1Lightness = baseGroup2Lightness !== 0 
+        ? Math.max(0, Math.min(100, baseGroup2Lightness / ratio))
+        : baseGroup2Lightness
+
+      pairs.push({ ratio, group2Lightness, group1Lightness })
     }
     return pairs
   }
 
   const pairs = generateContrastPairs()
 
-  // Calculate marker position (0-100%) - REVERSED: high contrast (low ratio) = 0, low contrast (high ratio) = 100
-  let markerPosition: number
-  if (contrastValue <= rangeMin) {
-    markerPosition = 100 // Low ratio = high contrast = right side (100)
-  } else if (contrastValue >= rangeMax) {
-    markerPosition = 0 // High ratio = low contrast = left side (0)
-  } else {
-    // Reverse the position: 100 - normal position
-    markerPosition = 100 - ((contrastValue - rangeMin) / (rangeMax - rangeMin)) * 100
-  }
+  // Calculate marker position based on where group1's original lightness falls
+  // Using the contrast formula: contrast = group2 / group1
+  const group1ToGroup2Ratio = baseGroup2Lightness !== 0 && targetGroup1Lightness !== 0 
+    ? baseGroup2Lightness / targetGroup1Lightness 
+    : 1
 
-  // Remap to 0-100 scale
-  const remappedValue = markerPosition
+  let markerPosition: number
+  if (group1ToGroup2Ratio <= rangeMin) {
+    markerPosition = 0 // At or below minimum = left edge
+  } else if (group1ToGroup2Ratio >= rangeMax) {
+    markerPosition = 100 // At or above maximum = right edge
+  } else {
+    // Linear interpolation between rangeMin and rangeMax to 0-100%
+    markerPosition = ((group1ToGroup2Ratio - rangeMin) / (rangeMax - rangeMin)) * 100
+  }
 
   return (
     <div className="flex flex-col flex-1 min-w-0">
       {/* Label and range inputs in one row */}
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex items-center gap-3 mb-2 justify-end">
         <Text type="secondary" className="text-xs whitespace-nowrap">
           Escala de Contraste
         </Text>
-        <div className="flex items-center gap-2">
-          <InputNumber
-            size="small"
-            min={0.5}
-            max={10}
-            step={0.1}
-            value={rangeMin}
-            onChange={(val) => onRangeMinChange(val ?? 1.0)}
-            disabled={isReadOnly || rangesLocked}
-            className="w-12"
-            controls={false}
-          />
-          <Text type="secondary" className="text-xs">—</Text>
-          <InputNumber
-            size="small"
-            min={0.5}
-            max={10}
-            step={0.1}
-            value={rangeMax}
-            onChange={(val) => onRangeMaxChange(val ?? 4.0)}
-            disabled={isReadOnly || rangesLocked}
-            className="w-12"
-            controls={false}
-          />
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <InputNumber
+              size="small"
+              min={0.5}
+              max={10}
+              step={0.1}
+              value={rangeMin}
+              onChange={(val) => onRangeMinChange(val ?? 1.0)}
+              disabled={isReadOnly || rangesLocked}
+              className="w-12"
+              controls={false}
+            />
+            <Text type="secondary" className="text-xs">—</Text>
+            <InputNumber
+              size="small"
+              min={0.5}
+              max={10}
+              step={0.1}
+              value={rangeMax}
+              onChange={(val) => onRangeMaxChange(val ?? 4.0)}
+              disabled={isReadOnly || rangesLocked}
+              className="w-12"
+              controls={false}
+            />
+          </div>
+        )}
       </div>
 
       {/* Contrast scale visualization */}
-      <div className="relative">
+      <div className="relative flex justify-end">
         {/* Scale showing contrast pairs */}
         <div
-          className="h-12 rounded-md flex overflow-hidden border border-gray-300"
-          style={{ minWidth: '200px' }}
+          className="relative h-12 rounded-md flex overflow-hidden border border-gray-300 flex-1"
+          style={{ maxWidth: '500px' }}
         >
           {pairs.map((pair, index) => (
             <div
@@ -109,37 +145,39 @@ export const ContrastScaleWithMarker = ({
               className="flex-1 h-full flex flex-col"
               title={`Ratio: ${pair.ratio.toFixed(2)}`}
             >
-              {/* Base color (darker) */}
+              {/* Group2 color (fixed reference at top) */}
               <div
                 className="flex-1"
-                style={{ backgroundColor: `hsl(0, 0%, ${pair.baseLightness}%)` }}
+                style={{ backgroundColor: `hsl(0, 0%, ${pair.group2Lightness}%)` }}
               />
-              {/* Target color (lighter based on ratio) */}
+              {/* Group1 color (varies with contrast at bottom) */}
               <div
                 className="flex-1"
-                style={{ backgroundColor: `hsl(0, 0%, ${pair.targetLightness}%)` }}
+                style={{ backgroundColor: `hsl(0, 0%, ${pair.group1Lightness}%)` }}
               />
             </div>
           ))}
-        </div>
 
-        {/* Marker */}
-        <Tooltip title={tooltipContent} color="#fff" placement="top">
-          <div
-            className="absolute top-0 h-full flex flex-col items-center justify-center cursor-help"
-            style={{
-              left: `${Math.max(0, Math.min(100, markerPosition))}%`,
-              transform: 'translateX(-50%)'
-            }}
-          >
-            <div className="w-1 h-full bg-red-500 border border-white" />
+          {/* Marker showing where original group1 color is on the scale */}
+          <Tooltip title={tooltipContent} color="#fff" placement="top">
             <div
-              className="absolute bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap cursor-help"
+              className="absolute top-0 h-full flex flex-col items-center justify-center cursor-help"
+              style={{
+                left: `${Math.max(0, Math.min(100, markerPosition))}%`,
+                transform: 'translateX(-50%)'
+              }}
             >
-              {Math.round(remappedValue)}
+              <div className="w-1 h-full bg-red-500 border border-white" />
+              {isAdmin && (
+                <div
+                  className="absolute bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap cursor-help"
+                >
+                  {group1ToGroup2Ratio.toFixed(2)}
+                </div>
+              )}
             </div>
-          </div>
-        </Tooltip>
+          </Tooltip>
+        </div>
       </div>
     </div>
   )

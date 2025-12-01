@@ -16,6 +16,7 @@ interface SliderStepComponentProps {
   onValueChange: (field: string, value: number) => void
   isReadOnly?: boolean
   rangesLocked?: boolean
+  isAdmin?: boolean
 }
 
 const getDesaturatedColor = (hex: string): string => {
@@ -72,13 +73,15 @@ const ColorPropertiesWithRange = ({
   stepKey,
   fieldKey,
   isReadOnly,
-  rangesLocked
+  rangesLocked,
+  isAdmin
 }: { 
   hex: string
   stepKey: string
   fieldKey: string
   isReadOnly?: boolean
   rangesLocked?: boolean
+  isAdmin?: boolean
 }) => {
   const props = getColorProperties(hex)
   const hcl = getHclFromHex(hex)
@@ -142,6 +145,7 @@ const ColorPropertiesWithRange = ({
         maxValue={360}
         isReadOnly={isReadOnly}
         rangesLocked={rangesLocked}
+        isAdmin={isAdmin}
       />
     )
   } else if (stepKey === 'intensidade') {
@@ -172,6 +176,7 @@ const ColorPropertiesWithRange = ({
         maxValue={150}
         isReadOnly={isReadOnly}
         rangesLocked={rangesLocked}
+        isAdmin={isAdmin}
       />
     )
   } else if (stepKey === 'profundidade') {
@@ -259,6 +264,7 @@ export const SliderStepComponent = ({
   onValueChange,
   isReadOnly,
   rangesLocked,
+  isAdmin,
 }: SliderStepComponentProps) => {
   return (
     <>
@@ -312,6 +318,7 @@ export const SliderStepComponent = ({
                 fieldKey={field.value}
                 isReadOnly={isReadOnly}
                 rangesLocked={rangesLocked}
+                isAdmin={isAdmin}
               />
             </div>
 
