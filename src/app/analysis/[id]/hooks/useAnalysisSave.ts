@@ -183,7 +183,6 @@ export function useAnalysisSave({
 
       await saveAnalysisProgress(analysis.id, currentStep, updateData)
 
-      message.success('Dados salvos!')
     } catch (error) {
       console.error('Error saving:', error)
       message.error('Erro ao salvar dados')

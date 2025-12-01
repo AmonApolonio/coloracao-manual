@@ -133,9 +133,9 @@ export const GeralSummaryComponent = ({
   const avgIntensidade = calculateAverageFromStep(analysisData.intensidade)
   const avgProfundidade = calculateAverageFromStep(analysisData.profundidade)
 
-  const geralTemperatura = analysisData.geral?.temperatura ?? avgTemperatura
-  const geralIntensidade = analysisData.geral?.intensidade ?? avgIntensidade
-  const geralProfundidade = analysisData.geral?.profundidade ?? avgProfundidade
+  const geralTemperatura = analysisData.geral?.temperatura ?? 50
+  const geralIntensidade = analysisData.geral?.intensidade ?? 50
+  const geralProfundidade = analysisData.geral?.profundidade ?? 50
 
   // Get all extracted colors for display - sorted by COLOR_FIELDS order
   const colorSwatches = COLOR_FIELDS.filter(
