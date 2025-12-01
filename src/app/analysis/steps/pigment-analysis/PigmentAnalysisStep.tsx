@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Card, Typography, Empty, Steps, Button, Modal, Input, App } from 'antd'
+import { Card, Typography, Empty, Steps, Button, App } from 'antd'
 import { AimOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 import { SVGVectorData } from '@/lib/types'
 import { PigmentTemperatureDataUI, ProfundidadeComparisonUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
@@ -11,6 +11,7 @@ import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateTemperaturaPos
 import { SliderStepComponent } from './components/SliderStepComponent'
 import { ProfundidadeComparisonComponent } from './components/ProfundidadeComparisonComponent'
 import { GeralSummaryComponent } from './components/GeralSummaryComponent'
+import { useAuth } from '@/app/context/AuthContext'
 
 const { Paragraph } = Typography
 
@@ -37,9 +38,7 @@ export default function PigmentAnalysisStep({
   }>({})
 
   const [rangesLocked, setRangesLocked] = useState<boolean>(true)
-  const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false)
-  const [passwordInput, setPasswordInput] = useState<string>('')
-  const hasAdminPassword = !!process.env.NEXT_PUBLIC_ADMIN_PASSWORD
+  const { isAdmin } = useAuth()
   const { message } = App.useApp()
 
   const [analysisData, setAnalysisData] = useState<PigmentAnalysisDataUI>({
@@ -53,7 +52,10 @@ export default function PigmentAnalysisStep({
     },
   })
 
-  const savedDataLoadedRef = useRef(false)
+  // Track the last loaded savedAnalysisData to detect changes
+  const lastLoadedDataRef = useRef<string | null>(null)
+  // Track if we're currently loading saved data to prevent notifying parent
+  const isLoadingDataRef = useRef(false)
 
   // Initialize with extracted colors from first step
   useEffect(() => {
@@ -66,78 +68,90 @@ export default function PigmentAnalysisStep({
       })
       setExtractedColors(colors)
 
-      // Initialize data for all steps
-      const temperaturaData: PigmentTemperatureDataUI = {}
-      const intensidadeData: PigmentTemperatureDataUI = {}
+      // Initialize data for all steps (only if we don't have saved data)
+      if (!savedAnalysisData) {
+        const temperaturaData: PigmentTemperatureDataUI = {}
+        const intensidadeData: PigmentTemperatureDataUI = {}
 
-      Object.entries(colors).forEach(([field]) => {
-        temperaturaData[field] = {
-          hexColor: colors[field],
-          temperature: null,
-          temperatureCategory: '',
-        }
-        intensidadeData[field] = {
-          hexColor: colors[field],
-          temperature: null,
-          temperatureCategory: '',
-        }
-      })
+        Object.entries(colors).forEach(([field]) => {
+          temperaturaData[field] = {
+            hexColor: colors[field],
+            temperature: null,
+            temperatureCategory: '',
+          }
+          intensidadeData[field] = {
+            hexColor: colors[field],
+            temperature: null,
+            temperatureCategory: '',
+          }
+        })
 
-      const initData: PigmentAnalysisDataUI = {
-        temperatura: temperaturaData,
-        intensidade: intensidadeData,
-        profundidade: [
-          {
-            field: 'iris_vs_pele',
-            name: COMPARISON_FIELD_NAMES['iris_vs_pele'],
-            colors1: ['iris'],
-            colors2: ['testa', 'bochecha', 'queixo'],
-            value: null,
-            category: '',
+        const initData: PigmentAnalysisDataUI = {
+          temperatura: temperaturaData,
+          intensidade: intensidadeData,
+          profundidade: [
+            {
+              field: 'iris_vs_pele',
+              name: COMPARISON_FIELD_NAMES['iris_vs_pele'],
+              colors1: ['iris'],
+              colors2: ['testa', 'bochecha', 'queixo'],
+              value: null,
+              category: '',
+            },
+            {
+              field: 'cavidade_ocular_vs_pele',
+              name: COMPARISON_FIELD_NAMES['cavidade_ocular_vs_pele'],
+              colors1: ['cavidade_ocular'],
+              colors2: ['testa', 'bochecha', 'queixo'],
+              value: null,
+              category: '',
+            },
+            {
+              field: 'cabelo_vs_pele',
+              name: COMPARISON_FIELD_NAMES['cabelo_vs_pele'],
+              colors1: ['raiz_cabelo', 'sobrancelha'],
+              colors2: ['testa', 'bochecha', 'queixo'],
+              value: null,
+              category: '',
+            },
+            {
+              field: 'contorno_boca_vs_boca',
+              name: COMPARISON_FIELD_NAMES['contorno_boca_vs_boca'],
+              colors1: ['contorno_boca'],
+              colors2: ['boca'],
+              value: null,
+              category: '',
+            },
+          ],
+          geral: {
+            temperatura: null,
+            intensidade: null,
+            profundidade: null,
           },
-          {
-            field: 'cavidade_ocular_vs_pele',
-            name: COMPARISON_FIELD_NAMES['cavidade_ocular_vs_pele'],
-            colors1: ['cavidade_ocular'],
-            colors2: ['testa', 'bochecha', 'queixo'],
-            value: null,
-            category: '',
-          },
-          {
-            field: 'cabelo_vs_pele',
-            name: COMPARISON_FIELD_NAMES['cabelo_vs_pele'],
-            colors1: ['raiz_cabelo', 'sobrancelha'],
-            colors2: ['testa', 'bochecha', 'queixo'],
-            value: null,
-            category: '',
-          },
-          {
-            field: 'contorno_boca_vs_boca',
-            name: COMPARISON_FIELD_NAMES['contorno_boca_vs_boca'],
-            colors1: ['contorno_boca'],
-            colors2: ['boca'],
-            value: null,
-            category: '',
-          },
-        ],
-        geral: {
-          temperatura: null,
-          intensidade: null,
-          profundidade: null,
-        },
+        }
+
+        setAnalysisData(initData)
       }
-
-      setAnalysisData(initData)
     }
-  }, [initialData])
+  }, [initialData, savedAnalysisData])
 
-  // Load previously saved analysis data from database (only once when extractedColors are ready)
+  // Load previously saved analysis data from database
+  // This runs whenever savedAnalysisData changes or becomes available
   useEffect(() => {
-    if (Object.keys(extractedColors).length > 0 && !savedDataLoadedRef.current) {
-      savedDataLoadedRef.current = true
-      if (savedAnalysisData) {
+    if (Object.keys(extractedColors).length > 0 && savedAnalysisData) {
+      // Create a hash of the savedAnalysisData to detect changes
+      const dataHash = JSON.stringify(savedAnalysisData)
+      
+      // Only load if the data has changed
+      if (lastLoadedDataRef.current !== dataHash) {
+        isLoadingDataRef.current = true
+        lastLoadedDataRef.current = dataHash
         const loadedData = convertDBToUI(savedAnalysisData, extractedColors)
         setAnalysisData(loadedData)
+        // Reset the loading flag after a tick to allow state to settle
+        setTimeout(() => {
+          isLoadingDataRef.current = false
+        }, 0)
       }
     }
   }, [extractedColors, savedAnalysisData])
@@ -147,11 +161,13 @@ export default function PigmentAnalysisStep({
   onDataChangeRef.current = onDataChange
 
   // Notify parent of data changes - convert to DB format before sending
+  // Only notify after we've had a chance to load saved data (extractedColors are ready)
+  // Skip notification when we're loading data from saved state to prevent loops
   useEffect(() => {
     if (
       onDataChangeRef.current &&
       Object.keys(extractedColors).length > 0 &&
-      savedDataLoadedRef.current
+      !isLoadingDataRef.current
     ) {
       const dbData = convertUIToDB(analysisData)
       onDataChangeRef.current(dbData)
@@ -283,23 +299,15 @@ export default function PigmentAnalysisStep({
   }
 
   const handleLockToggle = () => {
-    if (rangesLocked && hasAdminPassword) {
-      setPasswordModalOpen(true)
-      setPasswordInput('')
-    } else if (!rangesLocked) {
-      setRangesLocked(true)
-    }
-  }
-
-  const handlePasswordSubmit = () => {
-    if (passwordInput === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
-      setRangesLocked(false)
-      setPasswordModalOpen(false)
-      setPasswordInput('')
-      message.success('Escalas desbloqueadas')
+    if (rangesLocked) {
+      if (isAdmin) {
+        setRangesLocked(false)
+        message.success('Escalas desbloqueadas')
+      } else {
+        message.error('Apenas administradores podem desbloquear as escalas')
+      }
     } else {
-      message.error('Senha incorreta')
-      setPasswordInput('')
+      setRangesLocked(true)
     }
   }
 
@@ -364,7 +372,7 @@ export default function PigmentAnalysisStep({
                 Auto-preencher
               </Button>
             )}
-            {currentSubStep < 3 && !isReadOnly && hasAdminPassword && (
+            {currentSubStep < 3 && !isReadOnly && isAdmin && (
               <Button
                 type="text"
                 icon={rangesLocked ? <LockOutlined /> : <UnlockOutlined />}
@@ -413,28 +421,6 @@ export default function PigmentAnalysisStep({
         />
       )}
 
-      {/* Password Modal for Unlocking Ranges */}
-      <Modal
-        title="Desbloquear Escalas"
-        open={passwordModalOpen}
-        onOk={handlePasswordSubmit}
-        onCancel={() => {
-          setPasswordModalOpen(false)
-          setPasswordInput('')
-        }}
-        okText="Desbloquear"
-        cancelText="Cancelar"
-        centered
-        width={320}
-      >
-        <Input.Password
-          placeholder="Digite a senha"
-          value={passwordInput}
-          onChange={(e) => setPasswordInput(e.target.value)}
-          onPressEnter={handlePasswordSubmit}
-          autoFocus
-        />
-      </Modal>
       </Card>
     </App>
   )

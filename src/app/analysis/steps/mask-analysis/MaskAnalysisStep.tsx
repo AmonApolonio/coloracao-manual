@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Card } from 'antd'
 import MaskCanvas from './MaskCanvas'
 import { MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
@@ -129,6 +129,40 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
   const [selectedSeason, setSelectedSeason] = useState<ColorSeason | null>(
     (savedData?.colorSeason as ColorSeason) ?? null
   )
+  
+  // Track the last loaded savedData to detect changes
+  const lastLoadedDataRef = useRef<string | null>(null)
+  // Track if we're currently loading saved data to prevent notifying parent
+  const isLoadingDataRef = useRef(false)
+  
+  // Load saved data when it becomes available or changes
+  useEffect(() => {
+    if (savedData) {
+      const dataHash = JSON.stringify(savedData)
+      
+      // Only load if the data has changed
+      if (lastLoadedDataRef.current !== dataHash) {
+        isLoadingDataRef.current = true
+        lastLoadedDataRef.current = dataHash
+        
+        setSharedFacePosition(savedData.facePosition || { x: 160, y: 240, scale: 1 })
+        setSelectedMasks({
+          temperatura: savedData.temperatura ?? null,
+          temperatura2: savedData.temperatura ?? null,
+          intensidade: savedData.intensidade ?? null,
+          profundidade: savedData.profundidade ?? null,
+          profundidade2: savedData.profundidade ?? null,
+          subtom: savedData.subtom ?? null,
+        })
+        setSelectedSeason((savedData.colorSeason as ColorSeason) ?? null)
+        
+        // Reset the loading flag after a tick to allow state to settle
+        setTimeout(() => {
+          isLoadingDataRef.current = false
+        }, 0)
+      }
+    }
+  }, [savedData])
 
   // Detect season based on selections
   const seasonResult = detectSeason(
@@ -139,7 +173,10 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
 
   // Emit data changes to parent - only emit primary temperature and profundidade
   // temperatura2 and profundidade2 are synced locally but not saved to DB
+  // Skip notification when we're loading data from saved state to prevent loops
   useEffect(() => {
+    if (isLoadingDataRef.current) return
+    
     onDataChange?.({
       temperatura: selectedMasks.temperatura as 'fria' | 'quente' | null,
       intensidade: selectedMasks.intensidade as 'suave' | 'brilhante' | null,

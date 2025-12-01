@@ -2,23 +2,30 @@ import { createClient } from '@supabase/supabase-js'
 import { User, Analysis, AnalysisStatus } from './types'
 import { PigmentAnalysisDataDB, MaskAnalysisDataDB, ColorSeason } from './types-db'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Client-side Supabase configuration (fetched from API)
+let supabase: any = null
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+async function getSupabaseClient() {
+  if (supabase) return supabase
+
+  try {
+    const response = await fetch('/api/config/supabase')
+    const config = await response.json()
+    supabase = createClient(config.url, config.anonKey)
+    return supabase
+  } catch (error) {
+    console.error('Failed to initialize Supabase client:', error)
+    throw error
+  }
 }
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-// ========== CLIENT-SIDE UTILITY FUNCTIONS ==========
 
 /**
  * Fetch all users and analyses, organize by status
  */
 export async function loadAllUsersAndAnalyses() {
+  const client = await getSupabaseClient()
   // Fetch all users
-  const { data: allUsers, error: errorAll } = await supabase
+  const { data: allUsers, error: errorAll } = await client
     .from('users')
     .select('*')
     .order('created_at', { ascending: false })
@@ -26,7 +33,7 @@ export async function loadAllUsersAndAnalyses() {
   if (errorAll) throw errorAll
 
   // Fetch all analyses
-  const { data: analyses, error: errorAnalyses } = await supabase
+  const { data: analyses, error: errorAnalyses } = await client
     .from('analyses')
     .select('*')
     .order('created_at', { ascending: false })
@@ -41,8 +48,9 @@ export async function loadAllUsersAndAnalyses() {
  * Priority: existing in_process -> not_started -> create new
  */
 export async function getOrCreateAnalysisForUser(userId: string): Promise<string> {
+  const client = await getSupabaseClient()
   // Check if user has any in-progress analysis
-  const { data: existingAnalyses, error: checkError } = await supabase
+  const { data: existingAnalyses, error: checkError } = await client
     .from('analyses')
     .select('id, status')
     .eq('user_id', userId)
@@ -57,7 +65,7 @@ export async function getOrCreateAnalysisForUser(userId: string): Promise<string
   }
 
   // Check if there's a not_started analysis
-  const { data: notStartedAnalyses, error: notStartedError } = await supabase
+  const { data: notStartedAnalyses, error: notStartedError } = await client
     .from('analyses')
     .select('id')
     .eq('user_id', userId)
@@ -72,7 +80,7 @@ export async function getOrCreateAnalysisForUser(userId: string): Promise<string
   }
 
   // Create new analysis
-  const { data: newAnalysis, error: insertError } = await supabase
+  const { data: newAnalysis, error: insertError } = await client
     .from('analyses')
     .insert({
       user_id: userId,
@@ -93,7 +101,8 @@ export async function getOrCreateAnalysisForUser(userId: string): Promise<string
  * Create a new analysis for a user
  */
 export async function createNewAnalysis(userId: string): Promise<Analysis> {
-  const { data: newAnalysis, error: insertError } = await supabase
+  const client = await getSupabaseClient()
+  const { data: newAnalysis, error: insertError } = await client
     .from('analyses')
     .insert({
       user_id: userId,
@@ -116,7 +125,8 @@ export async function createNewAnalysis(userId: string): Promise<Analysis> {
  * Fetch a single analysis by ID
  */
 export async function fetchAnalysisById(analysisId: string): Promise<Analysis | null> {
-  const { data, error } = await supabase
+  const client = await getSupabaseClient()
+  const { data, error } = await client
     .from('analyses')
     .select('*')
     .eq('id', analysisId)
@@ -130,7 +140,8 @@ export async function fetchAnalysisById(analysisId: string): Promise<Analysis | 
  * Fetch a user by ID
  */
 export async function fetchUserById(userId: string): Promise<User | null> {
-  const { data, error } = await supabase
+  const client = await getSupabaseClient()
+  const { data, error } = await client
     .from('users')
     .select('*')
     .eq('id', userId)
@@ -150,6 +161,7 @@ export async function updateAnalysisColorExtraction(
   svgVectorData: any,
   currentStep: number
 ): Promise<void> {
+  const client = await getSupabaseClient()
   const updatePayload: any = {
     current_step: currentStep + 1,
     status: 'in_process' as AnalysisStatus,
@@ -157,7 +169,7 @@ export async function updateAnalysisColorExtraction(
     extracao: svgVectorData,
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from('analyses')
     .update(updatePayload)
     .eq('id', analysisId)
@@ -173,6 +185,7 @@ export async function updateAnalysisMaskData(
   maskAnalysisData: MaskAnalysisDataDB,
   currentStep: number
 ): Promise<void> {
+  const client = await getSupabaseClient()
   const updatePayload: any = {
     current_step: currentStep + 1,
     status: 'in_process' as AnalysisStatus,
@@ -180,7 +193,7 @@ export async function updateAnalysisMaskData(
     analise_mascaras: maskAnalysisData,
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from('analyses')
     .update(updatePayload)
     .eq('id', analysisId)
@@ -196,6 +209,7 @@ export async function updateAnalysisPigmentData(
   pigmentAnalysisData: PigmentAnalysisDataDB,
   currentStep: number
 ): Promise<void> {
+  const client = await getSupabaseClient()
   const updatePayload: any = {
     current_step: currentStep + 1,
     status: 'in_process' as AnalysisStatus,
@@ -203,7 +217,7 @@ export async function updateAnalysisPigmentData(
     analise_pigmentos: pigmentAnalysisData,
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from('analyses')
     .update(updatePayload)
     .eq('id', analysisId)
@@ -218,12 +232,13 @@ export async function updateAnalysisColorSeason(
   analysisId: string,
   colorSeason: ColorSeason
 ): Promise<void> {
+  const client = await getSupabaseClient()
   const updatePayload: any = {
     color_season: colorSeason,
     updated_at: new Date().toISOString(),
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from('analyses')
     .update(updatePayload)
     .eq('id', analysisId)
@@ -239,6 +254,7 @@ export async function saveAnalysisProgress(
   currentStep: number,
   updateData: any
 ): Promise<void> {
+  const client = await getSupabaseClient()
   const updatePayload: any = {
     current_step: currentStep + 1,
     status: 'in_process' as AnalysisStatus,
@@ -246,7 +262,7 @@ export async function saveAnalysisProgress(
     ...updateData,
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from('analyses')
     .update(updatePayload)
     .eq('id', analysisId)
@@ -261,6 +277,7 @@ export async function completeAnalysis(
   analysisId: string,
   colorSeason?: ColorSeason | null
 ): Promise<void> {
+  const client = await getSupabaseClient()
   const updatePayload: any = {
     status: 'completed' as AnalysisStatus,
     current_step: 7,
@@ -272,7 +289,7 @@ export async function completeAnalysis(
     updatePayload.color_season = colorSeason
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from('analyses')
     .update(updatePayload)
     .eq('id', analysisId)

@@ -12,7 +12,7 @@ import {
   Spin,
   message,
 } from 'antd'
-import { UserOutlined, PlusOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons'
+import { UserOutlined, PlusOutlined, EditOutlined, EyeOutlined, LogoutOutlined } from '@ant-design/icons'
 import type { TabsProps } from 'antd'
 import { 
   loadAllUsersAndAnalyses, 
@@ -20,6 +20,7 @@ import {
   createNewAnalysis 
 } from '@/lib/supabase'
 import { User } from '@/lib/types'
+import { useAuth } from '@/app/context/AuthContext'
 
 const { Content } = Layout
 
@@ -29,6 +30,7 @@ interface UserWithAllAnalyses extends User {
 
 export default function Home() {
   const router = useRouter()
+  const { logout, isAdmin } = useAuth()
   const [usersPending, setUsersPending] = useState<User[]>([])
   const [usersInAnalysis, setUsersInAnalysis] = useState<UserWithAllAnalyses[]>([])
   const [usersCompleted, setUsersCompleted] = useState<UserWithAllAnalyses[]>([])
@@ -47,30 +49,30 @@ export default function Home() {
 
       // Group analyses by user_id
       const analysesByUser = new Map<string, any[]>()
-      analyses?.forEach(a => {
+      analyses?.forEach((a: any) => {
         const existing = analysesByUser.get(a.user_id) || []
         existing.push(a)
         analysesByUser.set(a.user_id, existing)
       })
 
       // Users with no analysis at all OR with analyses that haven't started
-      const pending = allUsers?.filter(u => {
+      const pending = allUsers?.filter((u: User) => {
         const userAnalyses = analysesByUser.get(u.id) || []
-        return userAnalyses.length === 0 || userAnalyses.some(a => a.status === 'not_started')
+        return userAnalyses.length === 0 || userAnalyses.some((a: any) => a.status === 'not_started')
       }) || []
 
       // Users with at least one in_process analysis
       const inAnalysis = (allUsers || [])
-        .filter(u => {
+        .filter((u: User) => {
           const userAnalyses = analysesByUser.get(u.id) || []
-          return userAnalyses.some(a => a.status === 'in_process')
+          return userAnalyses.some((a: any) => a.status === 'in_process')
         })
-        .map(u => {
+        .map((u: User) => {
           const userAnalyses = analysesByUser.get(u.id) || []
           // Sort by created_at ascending to get chronological order (1st, 2nd, 3rd, etc.)
-          const sortedAnalyses = userAnalyses.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          const sortedAnalyses = userAnalyses.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           // Add index to each analysis
-          const analysesWithIndex = sortedAnalyses.map((analysis, idx) => ({
+          const analysesWithIndex = sortedAnalyses.map((analysis: any, idx: number) => ({
             ...analysis,
             analysisIndex: idx + 1,
           }))
@@ -82,16 +84,16 @@ export default function Home() {
 
       // Users who have completed analyses
       const completed = (allUsers || [])
-        .filter(u => {
+        .filter((u: User) => {
           const userAnalyses = analysesByUser.get(u.id) || []
-          return userAnalyses.some(a => a.status === 'completed')
+          return userAnalyses.some((a: any) => a.status === 'completed')
         })
-        .map(u => {
+        .map((u: User) => {
           const userAnalyses = analysesByUser.get(u.id) || []
           // Sort by created_at ascending to get chronological order (1st, 2nd, 3rd, etc.)
-          const sortedAnalyses = userAnalyses.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          const sortedAnalyses = userAnalyses.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           // Add index to each analysis
-          const analysesWithIndex = sortedAnalyses.map((analysis, idx) => ({
+          const analysesWithIndex = sortedAnalyses.map((analysis: any, idx: number) => ({
             ...analysis,
             analysisIndex: idx + 1,
           }))
@@ -101,8 +103,8 @@ export default function Home() {
           }
         })
 
-      const inProcessAnalyses = (analyses || []).filter(a => a.status === 'in_process')
-      const completedAnalyses = (analyses || []).filter(a => a.status === 'completed')
+      const inProcessAnalyses = (analyses || []).filter((a: any) => a.status === 'in_process')
+      const completedAnalyses = (analyses || []).filter((a: any) => a.status === 'completed')
 
       setUsersPending(pending)
       setUsersInAnalysis(inAnalysis)
@@ -351,6 +353,23 @@ export default function Home() {
           )}
         </div>
       </Content>
+      
+      {/* Floating Logout Button */}
+      <Button 
+        icon={<LogoutOutlined />}
+        onClick={logout}
+        type="primary"
+        danger
+        shape="circle"
+        size="large"
+        style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          zIndex: 1000,
+        }}
+        title="Sair"
+      />
     </Layout>
   )
 }
