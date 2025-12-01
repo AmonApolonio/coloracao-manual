@@ -61,8 +61,8 @@ export const ContrastScaleWithMarker = ({
 
     for (let i = 0; i <= steps; i++) {
       const t = i / steps
-      // Go from rangeMin to rangeMax for the visible range
-      const ratio = rangeMin + t * (rangeMax - rangeMin)
+      // Go from rangeMax to rangeMin for the visible range (inverted)
+      const ratio = rangeMax - t * (rangeMax - rangeMin)
 
       // Group2 stays fixed (reference)
       const group2Lightness = baseGroup2Lightness
@@ -87,13 +87,13 @@ export const ContrastScaleWithMarker = ({
     : 1
 
   let markerPosition: number
-  if (group1ToGroup2Ratio <= rangeMin) {
-    markerPosition = 0 // At or below minimum = left edge
-  } else if (group1ToGroup2Ratio >= rangeMax) {
-    markerPosition = 100 // At or above maximum = right edge
+  if (group1ToGroup2Ratio >= rangeMax) {
+    markerPosition = 0 // At or above maximum = left edge (inverted)
+  } else if (group1ToGroup2Ratio <= rangeMin) {
+    markerPosition = 100 // At or below minimum = right edge (inverted)
   } else {
-    // Linear interpolation between rangeMin and rangeMax to 0-100%
-    markerPosition = ((group1ToGroup2Ratio - rangeMin) / (rangeMax - rangeMin)) * 100
+    // Linear interpolation between rangeMax and rangeMin to 0-100% (inverted)
+    markerPosition = ((rangeMax - group1ToGroup2Ratio) / (rangeMax - rangeMin)) * 100
   }
 
   return (
