@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { Slider, Tag, Typography } from 'antd'
 import { ProfundidadeComparisonUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl, getColorProperties } from '../../shared/colorConversion'
@@ -70,6 +70,58 @@ const getAverageColorProperties = (
     },
   }
 }
+
+// Memoized slider component to prevent re-render loops
+const ComparisonSlider = memo(({ 
+  value, 
+  onChange, 
+  disabled 
+}: { 
+  value: number | null
+  onChange: (value: number) => void
+  disabled?: boolean 
+}) => {
+  const [localValue, setLocalValue] = useState<number>(value ?? 50)
+  const isDraggingRef = useRef(false)
+
+  // Sync from prop only when not dragging - using useEffect to avoid render-phase updates
+  useEffect(() => {
+    if (!isDraggingRef.current) {
+      setLocalValue(value ?? 50)
+    }
+  }, [value])
+
+  const handleChange = useCallback((newValue: number) => {
+    isDraggingRef.current = true
+    setLocalValue(newValue)
+  }, [])
+
+  const handleChangeComplete = useCallback((newValue: number) => {
+    isDraggingRef.current = false
+    onChange(newValue)
+  }, [onChange])
+
+  return (
+    <Slider
+      min={0}
+      max={100}
+      step={1}
+      value={localValue}
+      onChange={handleChange}
+      onChangeComplete={handleChangeComplete}
+      disabled={disabled}
+      marks={{
+        0: '0',
+        12.5: '12.5',
+        47: '47',
+        53: '53',
+        87.5: '87.5',
+        100: '100',
+      }}
+      tooltip={{ open: false }}
+    />
+  )
+})
 
 const renderColorGroup = (
   fields: string[],
@@ -253,26 +305,10 @@ export const ProfundidadeComparisonComponent = ({
 
             {/* Slider */}
             <div className="bg-white rounded-lg p-4">
-              <Slider
-                min={0}
-                max={100}
-                step={1}
-                value={comparison.value ?? 50}
-                onChange={(value) =>
-                  onComparisonChange(index, value as number)
-                }
+              <ComparisonSlider
+                value={comparison.value}
+                onChange={(value) => onComparisonChange(index, value)}
                 disabled={isReadOnly}
-                marks={{
-                  0: '0',
-                  12.5: '12.5',
-                  47: '47',
-                  53: '53',
-                  87.5: '87.5',
-                  100: '100',
-                }}
-                tooltip={{
-                  formatter: (value) => `${value}`,
-                }}
               />
             </div>
           </div>

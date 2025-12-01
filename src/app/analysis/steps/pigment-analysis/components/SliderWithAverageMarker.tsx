@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, memo } from 'react'
+import { useState, useRef, useCallback, memo, useEffect } from 'react'
 import { Slider } from 'antd'
 
 interface SliderWithAverageMarkerProps {
@@ -25,13 +25,13 @@ export const SliderWithAverageMarker = memo(({
   // Local state for smooth dragging without triggering parent re-renders
   const [localValue, setLocalValue] = useState<number>(value ?? 50)
   const isDraggingRef = useRef(false)
-  
-  // Sync from prop only when not dragging and value actually changed
-  const lastPropValueRef = useRef(value)
-  if (!isDraggingRef.current && value !== lastPropValueRef.current) {
-    lastPropValueRef.current = value
-    setLocalValue(value ?? 50)
-  }
+
+  // Sync from prop only when not dragging - using useEffect to avoid render-phase updates
+  useEffect(() => {
+    if (!isDraggingRef.current) {
+      setLocalValue(value ?? 50)
+    }
+  }, [value])
 
   // Handle slider change during drag - only update local state
   const handleChange = useCallback((newValue: number) => {

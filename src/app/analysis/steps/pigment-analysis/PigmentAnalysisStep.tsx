@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, Typography, Empty, Steps, Button, App } from 'antd'
 import { AimOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 import { SVGVectorData } from '@/lib/types'
@@ -56,10 +56,19 @@ export default function PigmentAnalysisStep({
   const lastLoadedDataRef = useRef<string | null>(null)
   // Track if we're currently loading saved data to prevent notifying parent
   const isLoadingDataRef = useRef(false)
+  // Track last initialData to prevent unnecessary updates
+  const lastInitialDataRef = useRef<string | null>(null)
 
   // Initialize with extracted colors from first step
   useEffect(() => {
     if (initialData) {
+      // Create a hash to detect if initialData actually changed
+      const dataHash = JSON.stringify(initialData)
+      if (lastInitialDataRef.current === dataHash) {
+        return // Skip if data hasn't changed
+      }
+      lastInitialDataRef.current = dataHash
+
       const colors: { [key: string]: string } = {}
       Object.entries(initialData).forEach(([field, vectorData]) => {
         if (vectorData?.hex_color) {
@@ -174,7 +183,7 @@ export default function PigmentAnalysisStep({
     }
   }, [analysisData, extractedColors])
 
-  const handleStepValueChange = (field: string, value: number) => {
+  const handleStepValueChange = useCallback((field: string, value: number) => {
     if (isReadOnly) return
     
     const stepKey = ANALYSIS_STEPS[currentSubStep]
@@ -199,9 +208,9 @@ export default function PigmentAnalysisStep({
         },
       }
     })
-  }
+  }, [isReadOnly, currentSubStep, extractedColors])
 
-  const handleProfundidadeComparisonChange = (index: number, value: number) => {
+  const handleProfundidadeComparisonChange = useCallback((index: number, value: number) => {
     if (isReadOnly) return
     
     const category = getLabelCategory(value, 'profundidade')
@@ -220,9 +229,9 @@ export default function PigmentAnalysisStep({
         profundidade: updated,
       }
     })
-  }
+  }, [isReadOnly])
 
-  const handleGeralChange = (
+  const handleGeralChange = useCallback((
     key: 'temperatura' | 'intensidade' | 'profundidade',
     value: number
   ) => {
@@ -237,7 +246,7 @@ export default function PigmentAnalysisStep({
         [key]: value,
       },
     }))
-  }
+  }, [isReadOnly])
 
   // Auto-fill all sliders with calculated values from the color scales
   const handleAutoFill = () => {

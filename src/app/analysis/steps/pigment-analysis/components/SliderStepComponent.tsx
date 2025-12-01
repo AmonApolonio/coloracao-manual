@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { Slider, Tag, Typography } from 'antd'
 import { PigmentTemperatureDataUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl, getColorProperties, getHclFromHex, hclToHex } from '../../shared/colorConversion'
@@ -200,6 +200,58 @@ const ColorPropertiesWithRange = ({
   return null
 }
 
+// Memoized slider component to prevent re-render loops
+const FieldSlider = memo(({ 
+  value, 
+  onChange, 
+  disabled 
+}: { 
+  value: number | null | undefined
+  onChange: (value: number) => void
+  disabled?: boolean 
+}) => {
+  const [localValue, setLocalValue] = useState<number>(value ?? 50)
+  const isDraggingRef = useRef(false)
+
+  // Sync from prop only when not dragging - using useEffect to avoid render-phase updates
+  useEffect(() => {
+    if (!isDraggingRef.current) {
+      setLocalValue(value ?? 50)
+    }
+  }, [value])
+
+  const handleChange = useCallback((newValue: number) => {
+    isDraggingRef.current = true
+    setLocalValue(newValue)
+  }, [])
+
+  const handleChangeComplete = useCallback((newValue: number) => {
+    isDraggingRef.current = false
+    onChange(newValue)
+  }, [onChange])
+
+  return (
+    <Slider
+      min={0}
+      max={100}
+      step={1}
+      value={localValue}
+      onChange={handleChange}
+      onChangeComplete={handleChangeComplete}
+      disabled={disabled}
+      marks={{
+        0: '0',
+        12.5: '12.5',
+        47: '47',
+        53: '53',
+        87.5: '87.5',
+        100: '100',
+      }}
+      tooltip={{ open: false }}
+    />
+  )
+})
+
 export const SliderStepComponent = ({
   stepKey,
   extractedColors,
@@ -304,24 +356,10 @@ export const SliderStepComponent = ({
 
             {/* Slider */}
             <div>
-              <Slider
-                min={0}
-                max={100}
-                step={1}
-                value={data[field.value]?.temperature ?? 50}
-                onChange={(value) => onValueChange(field.value, value as number)}
+              <FieldSlider
+                value={data[field.value]?.temperature}
+                onChange={(value) => onValueChange(field.value, value)}
                 disabled={isReadOnly}
-                marks={{
-                  0: '0',
-                  12.5: '12.5',
-                  47: '47',
-                  53: '53',
-                  87.5: '87.5',
-                  100: '100',
-                }}
-                tooltip={{
-                  formatter: (value) => `${value}`,
-                }}
               />
             </div>
           </div>

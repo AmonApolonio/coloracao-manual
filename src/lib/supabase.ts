@@ -1,22 +1,34 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { User, Analysis, AnalysisStatus } from './types'
 import { PigmentAnalysisDataDB, MaskAnalysisDataDB, ColorSeason } from './types-db'
 
 // Client-side Supabase configuration (fetched from API)
-let supabase: any = null
+let supabase: SupabaseClient | null = null
+let supabasePromise: Promise<SupabaseClient> | null = null
 
-async function getSupabaseClient() {
+async function getSupabaseClient(): Promise<SupabaseClient> {
+  // Return existing client if already created
   if (supabase) return supabase
 
-  try {
-    const response = await fetch('/api/config/supabase')
-    const config = await response.json()
-    supabase = createClient(config.url, config.anonKey)
-    return supabase
-  } catch (error) {
-    console.error('Failed to initialize Supabase client:', error)
-    throw error
-  }
+  // If initialization is in progress, wait for it
+  if (supabasePromise) return supabasePromise
+
+  // Start initialization and store the promise to prevent race conditions
+  supabasePromise = (async () => {
+    try {
+      const response = await fetch('/api/config/supabase')
+      const config = await response.json()
+      supabase = createClient(config.url, config.anonKey)
+      return supabase
+    } catch (error) {
+      // Reset promise on error so it can be retried
+      supabasePromise = null
+      console.error('Failed to initialize Supabase client:', error)
+      throw error
+    }
+  })()
+
+  return supabasePromise
 }
 
 /**
