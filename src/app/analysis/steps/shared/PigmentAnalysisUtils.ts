@@ -1,5 +1,5 @@
 import { ColorField } from '@/lib/types'
-import { getHclFromHex, getColorProperties } from './colorConversion'
+import { getHclFromHex, getHsvFromHex, getColorProperties } from './colorConversion'
 
 export const COLOR_FIELDS: { value: ColorField; label: string }[] = [
   { value: 'iris', label: 'Iris' },
@@ -122,7 +122,7 @@ export const getLabelColor = (
  * Returns a value 0-100 representing position in the hue scale
  */
 export const calculateTemperaturaPosition = (hex: string, fieldKey: string): number => {
-  const hcl = getHclFromHex(hex)
+  const hsv = getHsvFromHex(hex)
   const colorField = fieldKey as ColorFieldKey
   const hueDefaults = DEFAULT_RANGES.hue[colorField] || { zero: 0, hundred: 360 }
   const hueStart = hueDefaults.zero
@@ -131,25 +131,25 @@ export const calculateTemperaturaPosition = (hex: string, fieldKey: string): num
   let huePosition: number
   if (hueStart <= hueEnd) {
     // Normal range (e.g., 20 to 90)
-    if (hcl.h < hueStart) {
+    if (hsv.h < hueStart) {
       huePosition = 0
-    } else if (hcl.h > hueEnd) {
+    } else if (hsv.h > hueEnd) {
       huePosition = 100
     } else {
-      huePosition = ((hcl.h - hueStart) / (hueEnd - hueStart)) * 100
+      huePosition = ((hsv.h - hueStart) / (hueEnd - hueStart)) * 100
     }
   } else {
     // Wrap-around range (e.g., 300 to 100 goes through 360/0)
     const range = (360 - hueStart) + hueEnd
     let adjustedHue: number
-    if (hcl.h >= hueStart) {
-      adjustedHue = hcl.h - hueStart
-    } else if (hcl.h <= hueEnd) {
-      adjustedHue = (360 - hueStart) + hcl.h
+    if (hsv.h >= hueStart) {
+      adjustedHue = hsv.h - hueStart
+    } else if (hsv.h <= hueEnd) {
+      adjustedHue = (360 - hueStart) + hsv.h
     } else {
       // Outside the wrap-around range - determine which extreme is closer
-      const distToStart = hcl.h - hueEnd
-      const distToEnd = hueStart - hcl.h
+      const distToStart = hsv.h - hueEnd
+      const distToEnd = hueStart - hsv.h
       adjustedHue = distToStart < distToEnd ? range : 0
     }
     huePosition = Math.max(0, Math.min(100, (adjustedHue / range) * 100))
