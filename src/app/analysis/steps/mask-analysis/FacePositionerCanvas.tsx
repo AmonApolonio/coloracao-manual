@@ -64,15 +64,14 @@ const FacePositionerCanvas = forwardRef<FacePositionerCanvasHandle, FacePosition
       img.onload = () => setFaceImage(img)
       img.onerror = () => {
         console.error('Failed to load face image from:', userFacePhotoUrl)
-        // Fallback: try to load through proxy if available
-        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(userFacePhotoUrl)}`
-        const proxyImg = new Image()
-        proxyImg.crossOrigin = 'anonymous'
-        proxyImg.onload = () => setFaceImage(proxyImg)
-        proxyImg.onerror = () => console.error('Failed to load face image through proxy')
-        proxyImg.src = proxyUrl
       }
-      img.src = userFacePhotoUrl
+      
+      const isExternalUrl = userFacePhotoUrl.startsWith('http://') || userFacePhotoUrl.startsWith('https://')
+      const imageSource = isExternalUrl 
+        ? `/api/proxy-image?url=${encodeURIComponent(userFacePhotoUrl)}`
+        : userFacePhotoUrl
+      
+      img.src = imageSource
     }, [userFacePhotoUrl])
 
     // Expose methods via ref
