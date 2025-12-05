@@ -23,7 +23,7 @@ export type ColorSeason =
   | 'Outono Suave'
   | 'Outono Escuro'
   | 'Primavera Brilhante'
-  | 'Primavera Clara'
+  | 'Primavera Claro'
   | 'Primavera Quente';
 
 // ========== SEASON MAPPINGS ==========
@@ -46,7 +46,7 @@ export const SEASON_VARIANTS: Record<Season, SeasonVariant[]> = {
 export function getColorSeason(season: Season, variant: SeasonVariant): ColorSeason {
   const fullName = `${season} ${variant}`;
   const validSeasons: ColorSeason[] = [
-    'Primavera Brilhante', 'Primavera Clara', 'Primavera Quente',
+    'Primavera Brilhante', 'Primavera Claro', 'Primavera Quente',
     'Outono Quente', 'Outono Suave', 'Outono Escuro',
     'Verão Frio', 'Verão Suave', 'Verão Claro',
     'Inverno Frio', 'Inverno Brilhante', 'Inverno Escuro',

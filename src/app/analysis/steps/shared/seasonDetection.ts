@@ -168,7 +168,7 @@ export function getSeasonColors(season: Season, variant: SeasonVariant): string[
   // Import all season colors
   const {
     PRIMAVERA_BRILHANTE_COLORS,
-    PRIMAVERA_CLARA_COLORS,
+    PRIMAVERA_CLARO_COLORS,
     PRIMAVERA_QUENTE_COLORS,
     OUTONO_QUENTE_COLORS,
     OUTONO_SUAVE_COLORS,
@@ -183,7 +183,7 @@ export function getSeasonColors(season: Season, variant: SeasonVariant): string[
 
   const colorMap: Record<ColorSeason, string[]> = {
     'Primavera Brilhante': PRIMAVERA_BRILHANTE_COLORS,
-    'Primavera Clara': PRIMAVERA_CLARA_COLORS,
+    'Primavera Claro': PRIMAVERA_CLARO_COLORS,
     'Primavera Quente': PRIMAVERA_QUENTE_COLORS,
     'Outono Quente': OUTONO_QUENTE_COLORS,
     'Outono Suave': OUTONO_SUAVE_COLORS,

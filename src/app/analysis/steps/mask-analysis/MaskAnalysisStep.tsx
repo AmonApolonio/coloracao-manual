@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Card } from 'antd'
 import MaskCanvas from './MaskCanvas'
 import { MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
-import { PROFUNDIDADE_ESCURA_COLORS, PROFUNDIDADE_CLARA_COLORS, TEMPERATURA_FRIA_COLORS, TEMPERATURA_QUENTE_COLORS, INTENSIDADE_SUAVE_COLORS, INTENSIDADE_BRILHANTE_COLORS, PROFUNDIDADE_ESCURA_COLORS2, PROFUNDIDADE_CLARA_COLORS2, TEMPERATURA_FRIA_COLORS2, TEMPERATURA_QUENTE_COLORS2, OURO_GRADIENT, PRATA_GRADIENT, type GradientConfig } from './constants/maskAnalysisColors'
+import { PROFUNDIDADE_ESCURA_COLORS, PROFUNDIDADE_CLARO_COLORS, TEMPERATURA_FRIA_COLORS, TEMPERATURA_QUENTE_COLORS, INTENSIDADE_SUAVE_COLORS, INTENSIDADE_BRILHANTE_COLORS, PROFUNDIDADE_ESCURA_COLORS2, PROFUNDIDADE_CLARO_COLORS2, TEMPERATURA_FRIA_COLORS2, TEMPERATURA_QUENTE_COLORS2, OURO_GRADIENT, PRATA_GRADIENT, type GradientConfig } from './constants/maskAnalysisColors'
 import { detectSeason, getSeasonVariants, getSeasonColors } from '../shared/seasonDetection'
 import { getColorSeason } from '@/lib/types'
 
@@ -100,7 +100,7 @@ const MASK_COMPARISONS: MaskComparison[] = [
     leftValue: 'escuro',
     rightValue: 'claro',
     leftColors: PROFUNDIDADE_ESCURA_COLORS,
-    rightColors: PROFUNDIDADE_CLARA_COLORS,
+    rightColors: PROFUNDIDADE_CLARO_COLORS,
   },
   {
     id: 'profundidade2',
@@ -110,7 +110,7 @@ const MASK_COMPARISONS: MaskComparison[] = [
     leftValue: 'escuro',
     rightValue: 'claro',
     leftColors: PROFUNDIDADE_ESCURA_COLORS2,
-    rightColors: PROFUNDIDADE_CLARA_COLORS2,
+    rightColors: PROFUNDIDADE_CLARO_COLORS2,
   },
 ]
 

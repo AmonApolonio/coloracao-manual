@@ -22,7 +22,7 @@ export const PROFUNDIDADE_ESCURA_COLORS = [
   '#18100f',
 ];
 
-export const PROFUNDIDADE_CLARA_COLORS = [
+export const PROFUNDIDADE_CLARO_COLORS = [
   '#b5adbd',
   '#94849c',
   '#efdebd',
@@ -175,7 +175,7 @@ export const PROFUNDIDADE_ESCURA_COLORS2 = [
   '#0f0f0f',
 ];
 
-export const PROFUNDIDADE_CLARA_COLORS2 = [
+export const PROFUNDIDADE_CLARO_COLORS2 = [
   '#afafaf',
   '#878787',
   '#dcdcdc',
@@ -268,7 +268,7 @@ export const PRIMAVERA_BRILHANTE_COLORS = [
   '#cdc3f5',
 ];
 
-export const PRIMAVERA_CLARA_COLORS = [
+export const PRIMAVERA_CLARO_COLORS = [
   '#cdcdaa',
   '#e6d2b9',
   '#d2b491',
