@@ -27,9 +27,9 @@ export const DEFAULT_RANGES = {
     boca: { min: 10, max: 50 },
   },
   hue: {
-    iris: { zero: 300, hundred: 100 },
-    raiz_cabelo: { zero: 300, hundred: 100 },
-    sobrancelha: { zero: 300, hundred: 100 },
+    iris: { zero: 0, hundred: 40 },
+    raiz_cabelo: { zero: 0, hundred: 40 },
+    sobrancelha: { zero: 0, hundred: 40 },
     testa: { zero: 0, hundred: 40 },
     bochecha: { zero: 0, hundred: 40 },
     cavidade_ocular: { zero: 0, hundred: 40 },
