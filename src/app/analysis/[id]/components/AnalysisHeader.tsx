@@ -65,11 +65,26 @@ export function AnalysisHeader({
 
   // Track scroll position
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50)
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsScrolled(!entry.isIntersecting)
+      },
+      {
+        threshold: 0,
+        rootMargin: '-50px 0px 0px 0px'
+      }
+    )
+
+    const sentinel = document.createElement('div')
+    sentinel.style.height = '1px'
+    document.body.insertBefore(sentinel, document.body.firstChild)
+
+    observer.observe(sentinel)
+
+    return () => {
+      observer.disconnect()
+      document.body.removeChild(sentinel)
     }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const isDisabled = isNextButtonDisabled(
@@ -173,9 +188,10 @@ export function AnalysisHeader({
       <header
         className={`
           sticky top-0 z-50 transition-all duration-300 ease-in-out w-full
+          px-4 py-3
           ${isScrolled
-            ? 'bg-white/95 backdrop-blur-md shadow-sm py-2'
-            : 'bg-transparent py-4'
+            ? 'bg-white/95 backdrop-blur-md shadow-sm'
+            : 'bg-transparent'
           }
         `}
       >
@@ -201,7 +217,6 @@ export function AnalysisHeader({
 
       <div className={`
         flex items-center justify-between gap-4 transition-all duration-300 w-full
-        ${isScrolled ? 'px-4' : 'px-0'}
       `}>
         {/* Left: Exit Button + User Info */}
         <div className="flex items-center gap-3 min-w-0">
@@ -221,48 +236,46 @@ export function AnalysisHeader({
                 alt={user.name}
                 onClick={() => setShowPictureInPicture(true)}
                 className={`
-                  rounded-full object-cover border-2 border-white shadow-md
+                  w-10 h-10 rounded-full object-cover border-2 border-white shadow-md
                   transition-all duration-300 cursor-pointer
                   hover:ring-2 hover:ring-primary/50 hover:scale-105
-                  ${isScrolled ? 'w-8 h-8' : 'w-12 h-12'}
+                  ${isScrolled ? 'scale-80' : 'scale-100'}
                 `}
               />
             </Tooltip>
           )}
-          <div className={`min-w-0 transition-all duration-300 ${isScrolled ? 'hidden sm:block' : ''}`}>
+          <div className={`min-w-0 transition-all duration-300`}>
             <h1 className={`
               font-fraunces font-bold text-secondary truncate transition-all duration-300
               ${isScrolled ? 'text-sm' : 'text-lg'}
             `}>
               {user.name}
             </h1>
-            {!isScrolled && (
-              <Badge
-                status={
-                  analysis.status === 'completed'
-                    ? 'success'
+            <Badge
+              status={
+                analysis.status === 'completed'
+                  ? 'success'
+                  : analysis.status === 'in_process'
+                    ? 'processing'
+                    : 'default'
+              }
+              text={
+                <span className={`text-xs text-gray-500 transition-all duration-300 opacity-100`}>
+                  {analysis.status === 'completed'
+                    ? 'Concluída'
                     : analysis.status === 'in_process'
-                      ? 'processing'
-                      : 'default'
-                }
-                text={
-                  <span className="text-xs text-gray-500">
-                    {analysis.status === 'completed'
-                      ? 'Concluída'
-                      : analysis.status === 'in_process'
-                        ? 'Em Progresso'
-                        : 'Não Iniciada'}
-                  </span>
-                }
-              />
-            )}
+                      ? 'Em Progresso'
+                      : 'Não Iniciada'}
+                </span>
+              }
+            />
           </div>
         </div>
 
         {/* Center: Steps (compact when scrolled) */}
         <div className={`
           flex-1 max-w-2xl transition-all duration-300
-          ${isScrolled ? 'hidden md:block' : ''}
+          ${isScrolled ? 'hidden md:block' : 'block'}
         `}>
           {isScrolled ? (
             <div className="flex items-center justify-center gap-3">
