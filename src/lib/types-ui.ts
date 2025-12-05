@@ -14,11 +14,7 @@ export interface PigmentTemperatureDataUI {
   };
 }
 
-export interface ProfundidadeComparisonUI {
-  field?: string; // ComparisonField identifier
-  name: string;
-  colors1: string[]; // Color fields for first group
-  colors2: string[]; // Color fields for second group (skin tones)
+export interface ProfundidadeDataUI {
   value: number | null;
   category: string;
 }
@@ -26,7 +22,7 @@ export interface ProfundidadeComparisonUI {
 export interface PigmentAnalysisDataUI {
   temperatura?: PigmentTemperatureDataUI;
   intensidade?: PigmentTemperatureDataUI;
-  profundidade?: ProfundidadeComparisonUI[] | undefined;
+  profundidade?: ProfundidadeDataUI;
   geral?: {
     temperatura: number | null;
     intensidade: number | null;

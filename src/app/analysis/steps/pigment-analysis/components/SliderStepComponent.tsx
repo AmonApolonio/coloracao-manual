@@ -3,7 +3,7 @@
 import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { Slider, Tag, Typography } from 'antd'
 import { PigmentTemperatureDataUI } from '@/lib/types-ui'
-import { hexToRgb, rgbToHsl, getColorProperties, getHclFromHex, hclToHex } from '../../shared/colorConversion'
+import { hexToRgb, rgbToHsl, getColorProperties, getHclFromHex, hclToHex, getHsvFromHex, hsvToHex } from '../../shared/colorConversion'
 import { COLOR_FIELDS, getLabelColor, DEFAULT_RANGES, ColorFieldKey } from '../../shared/PigmentAnalysisUtils'
 import { ColorScaleWithMarker } from './ColorScaleWithMarker'
 
@@ -28,8 +28,8 @@ const getDesaturatedColor = (hex: string): string => {
 
 // Generate colors for a custom range
 const generateHueScaleInRange = (
-  chroma: number, 
-  lightness: number, 
+  saturation: number, 
+  value: number, 
   startHue: number, 
   endHue: number, 
   steps: number = 36
@@ -46,7 +46,7 @@ const generateHueScaleInRange = (
       const range = (360 - startHue) + endHue
       hue = (startHue + t * range) % 360
     }
-    colors.push(hclToHex(hue, chroma, lightness))
+    colors.push(hsvToHex(hue, saturation, value))
   }
   return colors
 }
@@ -85,6 +85,7 @@ const ColorPropertiesWithRange = ({
 }) => {
   const props = getColorProperties(hex)
   const hcl = getHclFromHex(hex)
+  const hsv = getHsvFromHex(hex)
 
   // Get default values based on field key
   const colorField = fieldKey as ColorFieldKey
@@ -100,32 +101,32 @@ const ColorPropertiesWithRange = ({
   const [chromaEnd, setChromaEnd] = useState<number>(chromaDefaults.max)
 
   if (stepKey === 'temperatura') {
-    // Generate hue scale within the custom range
-    const hueColors = generateHueScaleInRange(hcl.c, hcl.l, hueStart, hueEnd, 36)
+    // Generate hue scale within the custom range using HSV
+    const hueColors = generateHueScaleInRange(hsv.s, hsv.v, hueStart, hueEnd, 36)
     
-    // Calculate marker position within the range, remapped to 0-100
+    // Calculate marker position within the range, remapped to 0-100 using HSV hue
     let huePosition: number
     if (hueStart <= hueEnd) {
       // Normal range (e.g., 20 to 90)
-      if (hcl.h < hueStart) {
+      if (hsv.h < hueStart) {
         huePosition = 0
-      } else if (hcl.h > hueEnd) {
+      } else if (hsv.h > hueEnd) {
         huePosition = 100
       } else {
-        huePosition = ((hcl.h - hueStart) / (hueEnd - hueStart)) * 100
+        huePosition = ((hsv.h - hueStart) / (hueEnd - hueStart)) * 100
       }
     } else {
       // Wrap-around range (e.g., 90 to 89 goes through 360/0)
       const range = (360 - hueStart) + hueEnd
       let adjustedHue: number
-      if (hcl.h >= hueStart) {
-        adjustedHue = hcl.h - hueStart
-      } else if (hcl.h <= hueEnd) {
-        adjustedHue = (360 - hueStart) + hcl.h
+      if (hsv.h >= hueStart) {
+        adjustedHue = hsv.h - hueStart
+      } else if (hsv.h <= hueEnd) {
+        adjustedHue = (360 - hueStart) + hsv.h
       } else {
         // Outside the wrap-around range - determine which extreme is closer
-        const distToStart = hcl.h - hueEnd
-        const distToEnd = hueStart - hcl.h
+        const distToStart = hsv.h - hueEnd
+        const distToEnd = hueStart - hsv.h
         adjustedHue = distToStart < distToEnd ? range : 0
       }
       huePosition = Math.max(0, Math.min(100, (adjustedHue / range) * 100))
@@ -136,7 +137,7 @@ const ColorPropertiesWithRange = ({
         colors={hueColors}
         markerPosition={huePosition}
         label="Escala de Matiz"
-        actualValue={`${Math.round(hcl.h)}°`}
+        actualValue={`${Math.round(hsv.h)}°`}
         displayValue={Math.round(huePosition)}
         rangeStart={hueStart}
         rangeEnd={hueEnd}

@@ -4,12 +4,12 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, Typography, Empty, Steps, Button, App } from 'antd'
 import { AimOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 import { SVGVectorData } from '@/lib/types'
-import { PigmentTemperatureDataUI, ProfundidadeComparisonUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
-import { PigmentAnalysisDataDB, COMPARISON_FIELD_NAMES } from '@/lib/types-db'
+import { PigmentTemperatureDataUI, ProfundidadeDataUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
+import { PigmentAnalysisDataDB } from '@/lib/types-db'
 import { convertUIToDB, convertDBToUI } from '@/lib/pigment-conversion'
 import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateTemperaturaPosition, calculateIntensidadePosition, calculateProfundidadePosition } from '../shared/PigmentAnalysisUtils'
 import { SliderStepComponent } from './components/SliderStepComponent'
-import { ProfundidadeComparisonComponent } from './components/ProfundidadeComparisonComponent'
+import { ProfundidadeStep } from './components/ProfundidadeStep'
 import { GeralSummaryComponent } from './components/GeralSummaryComponent'
 import { useAuth } from '@/app/context/AuthContext'
 
@@ -44,7 +44,10 @@ export default function PigmentAnalysisStep({
   const [analysisData, setAnalysisData] = useState<PigmentAnalysisDataUI>({
     temperatura: {},
     intensidade: {},
-    profundidade: [],
+    profundidade: {
+      value: null,
+      category: '',
+    },
     geral: {
       temperatura: null,
       intensidade: null,
@@ -98,40 +101,10 @@ export default function PigmentAnalysisStep({
         const initData: PigmentAnalysisDataUI = {
           temperatura: temperaturaData,
           intensidade: intensidadeData,
-          profundidade: [
-            {
-              field: 'iris_vs_pele',
-              name: COMPARISON_FIELD_NAMES['iris_vs_pele'],
-              colors1: ['iris'],
-              colors2: ['testa', 'bochecha', 'queixo'],
-              value: null,
-              category: '',
-            },
-            {
-              field: 'cavidade_ocular_vs_pele',
-              name: COMPARISON_FIELD_NAMES['cavidade_ocular_vs_pele'],
-              colors1: ['cavidade_ocular'],
-              colors2: ['testa', 'bochecha', 'queixo'],
-              value: null,
-              category: '',
-            },
-            {
-              field: 'cabelo_vs_pele',
-              name: COMPARISON_FIELD_NAMES['cabelo_vs_pele'],
-              colors1: ['raiz_cabelo', 'sobrancelha'],
-              colors2: ['testa', 'bochecha', 'queixo'],
-              value: null,
-              category: '',
-            },
-            {
-              field: 'contorno_boca_vs_boca',
-              name: COMPARISON_FIELD_NAMES['contorno_boca_vs_boca'],
-              colors1: ['contorno_boca'],
-              colors2: ['boca'],
-              value: null,
-              category: '',
-            },
-          ],
+          profundidade: {
+            value: null,
+            category: '',
+          },
           geral: {
             temperatura: null,
             intensidade: null,
@@ -210,25 +183,18 @@ export default function PigmentAnalysisStep({
     })
   }, [isReadOnly, currentSubStep, extractedColors])
 
-  const handleProfundidadeComparisonChange = useCallback((index: number, value: number) => {
+  const handleProfundidadeChange = useCallback((value: number) => {
     if (isReadOnly) return
     
     const category = getLabelCategory(value, 'profundidade')
 
-    setAnalysisData((prev) => {
-      const profundidadeData =
-        (prev.profundidade as ProfundidadeComparisonUI[]) || []
-      const updated = [...profundidadeData]
-      updated[index] = {
-        ...updated[index],
+    setAnalysisData((prev) => ({
+      ...prev,
+      profundidade: {
         value,
         category,
-      }
-      return {
-        ...prev,
-        profundidade: updated,
-      }
-    })
+      },
+    }))
   }, [isReadOnly])
 
   const handleGeralChange = useCallback((
@@ -285,25 +251,7 @@ export default function PigmentAnalysisStep({
         return { ...prev, intensidade: intensidadeData }
       })
     } else if (stepKey === 'profundidade') {
-      // Auto-fill profundidade values
-      setAnalysisData((prev) => {
-        const profundidadeData = [...(prev.profundidade as ProfundidadeComparisonUI[])]
-        profundidadeData.forEach((comparison, index) => {
-          const value = calculateProfundidadePosition(
-            comparison.colors1,
-            comparison.colors2,
-            extractedColors,
-            comparison.field
-          )
-          const category = getLabelCategory(value, 'profundidade')
-          profundidadeData[index] = {
-            ...profundidadeData[index],
-            value,
-            category,
-          }
-        })
-        return { ...prev, profundidade: profundidadeData }
-      })
+
     }
   }
 
@@ -371,7 +319,7 @@ export default function PigmentAnalysisStep({
             {ANALYSIS_STEPS[currentSubStep].title}
           </h2>
           <div className="flex items-center gap-2">
-            {currentSubStep < 3 && !isReadOnly && isAdmin && (
+            {currentSubStep < 2 && !isReadOnly && isAdmin && (
               <Button
                 type="default"
                 icon={<AimOutlined />}
@@ -381,7 +329,7 @@ export default function PigmentAnalysisStep({
                 Auto-preencher
               </Button>
             )}
-            {currentSubStep < 3 && !isReadOnly && isAdmin && (
+            {currentSubStep < 2 && !isReadOnly && isAdmin && (
               <Button
                 type="text"
                 icon={rangesLocked ? <LockOutlined /> : <UnlockOutlined />}
@@ -393,20 +341,18 @@ export default function PigmentAnalysisStep({
         </div>
         <Paragraph type="secondary">
           {currentSubStep === 2
-            ? 'Classifique a profundidade comparando os tons de cores relacionadas. Mova o controle deslizante para atualizar o valor de cada comparação.'
+            ? 'Classifique a profundidade geral baseando-se na escala de luminosidade. Mova o controle deslizante para definir o valor.'
             : `Classifique a ${ANALYSIS_STEPS[currentSubStep].title.toLowerCase()} de cada cor extraída. Mova o controle deslizante para atualizar o valor.`}
         </Paragraph>
       </div>
 
       {/* Step Content */}
       {currentSubStep === 2 ? (
-        <ProfundidadeComparisonComponent
+        <ProfundidadeStep
           extractedColors={extractedColors}
-          data={(analysisData.profundidade as ProfundidadeComparisonUI[]) || []}
-          onComparisonChange={handleProfundidadeComparisonChange}
+          data={(analysisData.profundidade as ProfundidadeDataUI) || { value: null, category: '' }}
+          onValueChange={handleProfundidadeChange}
           isReadOnly={isReadOnly}
-          rangesLocked={rangesLocked}
-          isAdmin={isAdmin}
         />
       ) : currentSubStep === 3 ? (
         <GeralSummaryComponent

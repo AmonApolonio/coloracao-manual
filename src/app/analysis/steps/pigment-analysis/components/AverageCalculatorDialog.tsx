@@ -2,15 +2,15 @@
 
 import { useState, useMemo } from 'react'
 import { Modal, Checkbox, Row, Col, Divider, Typography, Slider } from 'antd'
-import { PigmentTemperatureDataUI, ProfundidadeComparisonUI } from '@/lib/types-ui'
+import { PigmentTemperatureDataUI } from '@/lib/types-ui'
 
 const { Text } = Typography
 
 interface AverageCalculatorDialogProps {
   isOpen: boolean
   onClose: () => void
-  stepData: PigmentTemperatureDataUI | ProfundidadeComparisonUI[] | undefined
-  stepName: 'temperatura' | 'intensidade' | 'profundidade'
+  stepData: PigmentTemperatureDataUI | undefined
+  stepName: 'temperatura' | 'intensidade'
   currentAverage: number | null
 }
 
@@ -24,56 +24,31 @@ export const AverageCalculatorDialog = ({
   // Initialize selected items - all selected by default
   const [selectedItems, setSelectedItems] = useState<Set<string>>(() => {
     if (!stepData) return new Set()
-    if (Array.isArray(stepData)) {
-      return new Set(stepData.map((_, idx) => `item-${idx}`))
-    } else {
-      return new Set(Object.keys(stepData))
-    }
+    return new Set(Object.keys(stepData))
   })
 
   // Calculate filtered average based on selected items
   const { filteredAverage, items } = useMemo(() => {
     if (!stepData) return { filteredAverage: null, items: [] }
 
-    if (Array.isArray(stepData)) {
-      // For profundidade (array of comparisons)
-      const processedItems = stepData.map((item, idx) => ({
-        id: `item-${idx}`,
-        name: item.name,
-        value: item.value,
-        isSelected: selectedItems.has(`item-${idx}`),
-      }))
+    // For temperatura and intensidade (object)
+    const processedItems = Object.entries(stepData).map(([key, data]) => ({
+      id: key,
+      name: key,
+      value: data.temperature,
+      isSelected: selectedItems.has(key),
+    }))
 
-      const selectedValues = processedItems
-        .filter((item) => item.isSelected && item.value !== null)
-        .map((item) => item.value as number)
+    const selectedValues = processedItems
+      .filter((item) => item.isSelected && item.value !== null)
+      .map((item) => item.value as number)
 
-      const average =
-        selectedValues.length > 0
-          ? Math.round(selectedValues.reduce((a, b) => a + b, 0) / selectedValues.length)
-          : null
+    const average =
+      selectedValues.length > 0
+        ? Math.round(selectedValues.reduce((a, b) => a + b, 0) / selectedValues.length)
+        : null
 
-      return { filteredAverage: average, items: processedItems }
-    } else {
-      // For temperatura and intensidade (object)
-      const processedItems = Object.entries(stepData).map(([key, data]) => ({
-        id: key,
-        name: key,
-        value: data.temperature,
-        isSelected: selectedItems.has(key),
-      }))
-
-      const selectedValues = processedItems
-        .filter((item) => item.isSelected && item.value !== null)
-        .map((item) => item.value as number)
-
-      const average =
-        selectedValues.length > 0
-          ? Math.round(selectedValues.reduce((a, b) => a + b, 0) / selectedValues.length)
-          : null
-
-      return { filteredAverage: average, items: processedItems }
-    }
+    return { filteredAverage: average, items: processedItems }
   }, [stepData, selectedItems])
 
   const handleToggleItem = (id: string) => {

@@ -57,11 +57,91 @@ export const rgbToHsv = (r: number, g: number, b: number) => {
   const v = max
   const s = max === 0 ? 0 : delta / max
 
+  let h = 0
+  if (delta !== 0) {
+    switch (max) {
+      case r:
+        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6
+        break
+      case g:
+        h = ((b - r) / delta + 2) / 6
+        break
+      case b:
+        h = ((r - g) / delta + 4) / 6
+        break
+    }
+  }
+
   return {
-    h: 0,
+    h: Math.round(h * 360),
     s: Math.round(s * 100),
     v: Math.round(v * 100),
   }
+}
+
+// Get HSV values from hex (precise, not rounded)
+export const getHsvFromHex = (hex: string): { h: number; s: number; v: number } => {
+  const rgb = hexToRgb(hex)
+  const max = Math.max(rgb.r, rgb.g, rgb.b)
+  const min = Math.min(rgb.r, rgb.g, rgb.b)
+  const delta = max - min
+
+  const v = max
+  const s = max === 0 ? 0 : delta / max
+
+  let h = 0
+  if (delta !== 0) {
+    switch (max) {
+      case rgb.r:
+        h = ((rgb.g - rgb.b) / delta + (rgb.g < rgb.b ? 6 : 0)) / 6
+        break
+      case rgb.g:
+        h = ((rgb.b - rgb.r) / delta + 2) / 6
+        break
+      case rgb.b:
+        h = ((rgb.r - rgb.g) / delta + 4) / 6
+        break
+    }
+  }
+
+  return {
+    h: h * 360,
+    s: s * 100,
+    v: v * 100,
+  }
+}
+
+// Convert HSV to RGB
+export const hsvToRgb = (h: number, s: number, v: number): { r: number; g: number; b: number } => {
+  // h is 0-360, s and v are 0-100
+  const sNorm = s / 100
+  const vNorm = v / 100
+  const hNorm = h / 360
+
+  const i = Math.floor(hNorm * 6)
+  const f = hNorm * 6 - i
+  const p = vNorm * (1 - sNorm)
+  const q = vNorm * (1 - f * sNorm)
+  const t = vNorm * (1 - (1 - f) * sNorm)
+
+  let r: number, g: number, b: number
+  switch (i % 6) {
+    case 0: r = vNorm; g = t; b = p; break
+    case 1: r = q; g = vNorm; b = p; break
+    case 2: r = p; g = vNorm; b = t; break
+    case 3: r = p; g = q; b = vNorm; break
+    case 4: r = t; g = p; b = vNorm; break
+    case 5: r = vNorm; g = p; b = q; break
+    default: r = 0; g = 0; b = 0
+  }
+
+  return { r, g, b }
+}
+
+// Convert HSV to Hex
+export const hsvToHex = (h: number, s: number, v: number): string => {
+  const rgb = hsvToRgb(h, s, v)
+  return rgbToHex(rgb.r, rgb.g, rgb.b)
 }
 
 // Convert RGB to XYZ

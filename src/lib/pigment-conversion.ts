@@ -1,5 +1,5 @@
-import { PigmentAnalysisDataDB, ColorField, ComparisonField, COMPARISON_FIELD_NAMES } from './types-db'
-import { PigmentAnalysisDataUI, PigmentTemperatureDataUI, ProfundidadeComparisonUI } from './types-ui'
+import { PigmentAnalysisDataDB, ColorField } from './types-db'
+import { PigmentAnalysisDataUI, PigmentTemperatureDataUI, ProfundidadeDataUI } from './types-ui'
 import { getLabelCategory } from '../app/analysis/steps/shared/PigmentAnalysisUtils'
 
 /**
@@ -35,49 +35,12 @@ export const convertDBToUI = (
   })
   uiData.intensidade = intensidadeUI
 
-  // Convert profundidade - always create the full array structure
-  const profundidadeUI: ProfundidadeComparisonUI[] = [
-    {
-      field: 'iris_vs_pele',
-      name: COMPARISON_FIELD_NAMES['iris_vs_pele'],
-      colors1: ['iris'],
-      colors2: ['testa', 'bochecha', 'queixo'],
-      value: dbData.profundidade?.['iris_vs_pele'] ?? null,
-      category: dbData.profundidade?.['iris_vs_pele'] != null 
-        ? getLabelCategory(dbData.profundidade['iris_vs_pele'], 'profundidade')
-        : '',
-    },
-    {
-      field: 'cavidade_ocular_vs_pele',
-      name: COMPARISON_FIELD_NAMES['cavidade_ocular_vs_pele'],
-      colors1: ['cavidade_ocular'],
-      colors2: ['testa', 'bochecha', 'queixo'],
-      value: dbData.profundidade?.['cavidade_ocular_vs_pele'] ?? null,
-      category: dbData.profundidade?.['cavidade_ocular_vs_pele'] != null
-        ? getLabelCategory(dbData.profundidade['cavidade_ocular_vs_pele'], 'profundidade')
-        : '',
-    },
-    {
-      field: 'cabelo_vs_pele',
-      name: COMPARISON_FIELD_NAMES['cabelo_vs_pele'],
-      colors1: ['raiz_cabelo', 'sobrancelha'],
-      colors2: ['testa', 'bochecha', 'queixo'],
-      value: dbData.profundidade?.['cabelo_vs_pele'] ?? null,
-      category: dbData.profundidade?.['cabelo_vs_pele'] != null
-        ? getLabelCategory(dbData.profundidade['cabelo_vs_pele'], 'profundidade')
-        : '',
-    },
-    {
-      field: 'contorno_boca_vs_boca',
-      name: COMPARISON_FIELD_NAMES['contorno_boca_vs_boca'],
-      colors1: ['contorno_boca'],
-      colors2: ['boca'],
-      value: dbData.profundidade?.['contorno_boca_vs_boca'] ?? null,
-      category: dbData.profundidade?.['contorno_boca_vs_boca'] != null
-        ? getLabelCategory(dbData.profundidade['contorno_boca_vs_boca'], 'profundidade')
-        : '',
-    },
-  ]
+  // Convert profundidade
+  const profundidadeValue = dbData.profundidade ?? null
+  const profundidadeUI: ProfundidadeDataUI = {
+    value: profundidadeValue,
+    category: profundidadeValue != null ? getLabelCategory(profundidadeValue, 'profundidade') : '',
+  }
   uiData.profundidade = profundidadeUI
 
   // Copy geral as-is (it's already just numbers), but always include it
@@ -122,17 +85,9 @@ export const convertUIToDB = (uiData: PigmentAnalysisDataUI): PigmentAnalysisDat
     }
   }
 
-  // Convert profundidade - extract only values with standardized keys, filter out null
-  if (uiData.profundidade) {
-    const profundidadeDB: Partial<Record<ComparisonField, number>> = {}
-    uiData.profundidade.forEach((comparison) => {
-      if (comparison.value !== null && comparison.field) {
-        profundidadeDB[comparison.field as ComparisonField] = comparison.value
-      }
-    })
-    if (Object.keys(profundidadeDB).length > 0) {
-      dbData.profundidade = profundidadeDB
-    }
+  // Convert profundidade
+  if (uiData.profundidade && uiData.profundidade.value !== null) {
+    dbData.profundidade = uiData.profundidade.value
   }
 
   // Copy geral, filtering out null values

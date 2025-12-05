@@ -1,6 +1,6 @@
 import { SVGVectorData } from '@/lib/types'
 import { PigmentAnalysisDataDB, MaskAnalysisDataDB } from '@/lib/types-db'
-import { COLOR_FIELDS, COLOR_FIELDS_MAP, COMPARISON_NAMES } from './constants'
+import { COLOR_FIELDS, COLOR_FIELDS_MAP } from './constants'
 import { StepMapping } from './types'
 
 /**
@@ -89,15 +89,8 @@ export const getDisabledReasonTooltip = (
     }
   } else if (stepIndex === 3) {
     // Profundidade step
-    if (!pigmentData.profundidade) {
+    if (pigmentData.profundidade === null || pigmentData.profundidade === undefined) {
       return 'Nenhuma profundidade definida'
-    }
-    const profValues = Object.values(pigmentData.profundidade)
-    if (profValues.length < 4 || profValues.some(val => val === null || val === undefined)) {
-      const missingComparisons = Object.entries(pigmentData.profundidade)
-        .filter(([_, val]) => val === null || val === undefined)
-        .map(([key, _]) => COMPARISON_NAMES[key] || key)
-      return `Comparações faltando: ${missingComparisons.join(', ')}`
     }
   } else if (stepIndex === 4) {
     // Geral step
@@ -143,10 +136,8 @@ export const isPigmentStepComplete = (
     const intCount = Object.keys(pigmentData.intensidade).length
     return intCount > 0 && intCount === extractedColorsCount
   } else if (stepIndex === 3) {
-    // Profundidade step - check if all 4 comparisons have values
-    if (!pigmentData.profundidade) return false
-    const profValues = Object.values(pigmentData.profundidade)
-    return profValues.length === 4 && profValues.every(val => val !== null && val !== undefined)
+    // Profundidade step - check if single value is set
+    return pigmentData.profundidade !== null && pigmentData.profundidade !== undefined
   } else if (stepIndex === 4) {
     // Geral step - check if all geral values are set
     if (!pigmentData.geral) return false

@@ -37,10 +37,3 @@ export const COLOR_FIELDS_MAP: { [key: string]: string } = {
   'contorno_boca': 'Contorno Boca',
   'boca': 'Boca',
 }
-
-export const COMPARISON_NAMES: { [key: string]: string } = {
-  'iris_vs_pele': 'Íris vs Tons de Pele',
-  'cavidade_ocular_vs_pele': 'Cavidade Ocular vs Tons de Pele',
-  'cabelo_vs_pele': 'Tons de Cabelo vs Tons de Pele',
-  'contorno_boca_vs_boca': 'Contorno Boca vs Boca',
-}

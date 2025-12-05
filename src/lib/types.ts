@@ -19,7 +19,7 @@ export type {
 // UI types
 export type {
   PigmentTemperatureDataUI,
-  ProfundidadeComparisonUI,
+  ProfundidadeDataUI,
   PigmentAnalysisDataUI,
 } from './types-ui'
 

@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import { Tag, Tooltip, Typography, Button } from 'antd'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlassChart } from '@fortawesome/free-solid-svg-icons'
-import { PigmentTemperatureDataUI, ProfundidadeComparisonUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
+import { PigmentTemperatureDataUI, ProfundidadeDataUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl } from '../../shared/colorConversion'
 import { getLabelColor, getLabelCategory, COLOR_FIELDS } from '../../shared/PigmentAnalysisUtils'
 import { detectSeasonFromSliders } from '../../shared/seasonDetection'
@@ -34,21 +34,19 @@ interface GeralSummaryComponentProps {
 }
 
 const calculateAverageFromStep = (
-  stepData: PigmentTemperatureDataUI | ProfundidadeComparisonUI[] | undefined
+  stepData: PigmentTemperatureDataUI | ProfundidadeDataUI | undefined,
+  stepKey: 'temperatura' | 'intensidade' | 'profundidade'
 ): number | null => {
   if (!stepData) return null
 
-  if (Array.isArray(stepData)) {
-    // For profundidade (array of comparisons)
-    const validValues = stepData
-      .filter((item) => item.value !== null)
-      .map((item) => item.value as number)
-    if (validValues.length === 0) return null
-    const sum = validValues.reduce((acc, item) => acc + item, 0)
-    return Math.round(sum / validValues.length)
+  if (stepKey === 'profundidade') {
+    // For profundidade
+    const profData = stepData as ProfundidadeDataUI
+    return profData.value
   } else {
     // For temperatura and intensidade (object)
-    const values = Object.values(stepData)
+    const tempData = stepData as PigmentTemperatureDataUI
+    const values = Object.values(tempData)
       .filter((v) => v.temperature !== null)
       .map((v) => v.temperature as number)
     if (values.length === 0) return null
@@ -67,35 +65,25 @@ const getDesaturatedColor = (hex: string): string => {
  * Build tooltip content showing individual values and average calculation
  */
 const buildAverageTooltipContent = (
-  stepData: PigmentTemperatureDataUI | ProfundidadeComparisonUI[] | undefined,
+  stepData: PigmentTemperatureDataUI | ProfundidadeDataUI | undefined,
+  stepKey: 'temperatura' | 'intensidade' | 'profundidade',
   average: number | null
 ) => {
   if (!stepData || average === null) return 'Sem dados'
 
-  if (Array.isArray(stepData)) {
-    // For profundidade (array of comparisons)
-    const values = stepData
-      .filter((item) => item.value !== null)
-      .map((item) => item.value as number)
-
-    if (values.length === 0) return 'Sem dados'
-
+  if (stepKey === 'profundidade') {
+    // For profundidade (single value)
+    const profData = stepData as ProfundidadeDataUI
     return (
       <div className="text-xs space-y-1">
-        <div className="font-semibold mb-2">Valores individuais:</div>
-        {values.map((val, idx) => (
-          <div key={idx} className="text-gray-700">
-            • {val}
-          </div>
-        ))}
-        <div className="border-t border-gray-400 pt-1 mt-2 font-semibold">
-          Média: ({values.join(' + ')}) / {values.length} = <span>{average}</span>
-        </div>
+        <div className="font-semibold mb-2">Valor de Profundidade:</div>
+        <div className="text-gray-700">• {profData.value}</div>
       </div>
     )
   } else {
     // For temperatura and intensidade (object)
-    const values = Object.entries(stepData)
+    const tempData = stepData as PigmentTemperatureDataUI
+    const values = Object.entries(tempData)
       .filter(([, v]) => v.temperature !== null)
       .map(([key, v]) => ({ key, value: v.temperature as number }))
 
@@ -126,12 +114,12 @@ export const GeralSummaryComponent = ({
   isReadOnly,
 }: GeralSummaryComponentProps) => {
   // Dialog state management
-  const [openDialog, setOpenDialog] = useState<'temperatura' | 'intensidade' | 'profundidade' | null>(null)
+  const [openDialog, setOpenDialog] = useState<'temperatura' | 'intensidade' | null>(null)
 
   // Calculate averages from individual steps
-  const avgTemperatura = calculateAverageFromStep(analysisData.temperatura)
-  const avgIntensidade = calculateAverageFromStep(analysisData.intensidade)
-  const avgProfundidade = calculateAverageFromStep(analysisData.profundidade)
+  const avgTemperatura = calculateAverageFromStep(analysisData.temperatura, 'temperatura')
+  const avgIntensidade = calculateAverageFromStep(analysisData.intensidade, 'intensidade')
+  const avgProfundidade = calculateAverageFromStep(analysisData.profundidade, 'profundidade')
 
   const geralTemperatura = analysisData.geral?.temperatura ?? 50
   const geralIntensidade = analysisData.geral?.intensidade ?? 50
@@ -284,7 +272,7 @@ export const GeralSummaryComponent = ({
                   </Tag>
                 </div>
                 <Tooltip
-                  title={buildAverageTooltipContent(analysisData.temperatura, avgTemperatura)}
+                  title={buildAverageTooltipContent(analysisData.temperatura, 'temperatura', avgTemperatura)}
                   color="#fff"
                   destroyOnHidden
                 >
@@ -345,7 +333,7 @@ export const GeralSummaryComponent = ({
                   </Tag>
                 </div>
                 <Tooltip
-                  title={buildAverageTooltipContent(analysisData.intensidade, avgIntensidade)}
+                  title={buildAverageTooltipContent(analysisData.intensidade, 'intensidade', avgIntensidade)}
                   color="#fff"
                   destroyOnHidden
                 >
@@ -406,7 +394,7 @@ export const GeralSummaryComponent = ({
                   </Tag>
                 </div>
                 <Tooltip
-                  title={buildAverageTooltipContent(analysisData.profundidade, avgProfundidade)}
+                  title={buildAverageTooltipContent(analysisData.profundidade, 'profundidade', avgProfundidade)}
                   color="#fff"
                   destroyOnHidden
                 >
@@ -414,7 +402,7 @@ export const GeralSummaryComponent = ({
                     className="flex flex-col cursor-help"
                   >
                     <Text type="secondary" className="text-xs mb-2">
-                      Média dos Individuais*
+                      Valor da Etapa*
                     </Text>
                     <Text code className="text-base hover:text-blue-500">
                       {avgProfundidade}
@@ -431,15 +419,6 @@ export const GeralSummaryComponent = ({
                   </Text>
                 </div>
               </div>
-
-              <Button
-                type="primary"
-                size="small"
-                className="!w-8 !h-8 !p-0 flex items-center justify-center"
-                onClick={() => setOpenDialog('profundidade')}
-              >
-                <FontAwesomeIcon icon={faMagnifyingGlassChart} />
-              </Button>
             </div>
 
             <SliderWithAverageMarker
@@ -467,14 +446,6 @@ export const GeralSummaryComponent = ({
         stepData={analysisData.intensidade}
         stepName="intensidade"
         currentAverage={avgIntensidade}
-      />
-
-      <AverageCalculatorDialog
-        isOpen={openDialog === 'profundidade'}
-        onClose={() => setOpenDialog(null)}
-        stepData={analysisData.profundidade}
-        stepName="profundidade"
-        currentAverage={avgProfundidade}
       />
     </>
   )

@@ -17,7 +17,7 @@ export {
 export {
   PigmentAnalysisStep,
   SliderStepComponent,
-  ProfundidadeComparisonComponent,
+  ProfundidadeStep,
   GeralSummaryComponent,
   SliderWithAverageMarker,
 } from './pigment-analysis'

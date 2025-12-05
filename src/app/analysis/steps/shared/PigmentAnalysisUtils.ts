@@ -30,19 +30,12 @@ export const DEFAULT_RANGES = {
     iris: { zero: 300, hundred: 100 },
     raiz_cabelo: { zero: 300, hundred: 100 },
     sobrancelha: { zero: 300, hundred: 100 },
-    testa: { zero: 40, hundred: 80 },
-    bochecha: { zero: 40, hundred: 80 },
-    cavidade_ocular: { zero: 40, hundred: 80 },
-    queixo: { zero: 40, hundred: 80 },
-    contorno_boca: { zero: 0, hundred: 65 },
-    boca: { zero: 0, hundred: 65 },
-  },
-  contrast: {
-    default: { min: 1.0, max: 3.0 },
-    iris_vs_pele: { min: 1.0, max: 3.0 },
-    cavidade_ocular_vs_pele: { min: 1.0, max: 1.5 },
-    cabelo_vs_pele: { min: 1.0, max: 3.0 },
-    contorno_boca_vs_boca: { min: 1.0, max: 1.5 },
+    testa: { zero: 0, hundred: 40 },
+    bochecha: { zero: 0, hundred: 40 },
+    cavidade_ocular: { zero: 0, hundred: 40 },
+    queixo: { zero: 0, hundred: 40 },
+    contorno_boca: { zero: 340, hundred: 40 },
+    boca: { zero: 340, hundred: 40 },
   },
 } as const
 
@@ -189,51 +182,22 @@ export const calculateIntensidadePosition = (hex: string, fieldKey: string): num
 }
 
 /**
- * Calculate the profundidade (contrast) position for a color comparison
- * Returns a value 0-100 representing position in the contrast scale (REVERSED: low contrast = 100, high contrast = 0)
+ * Calculate the profundidade (lightness) position based on average lightness of all colors
+ * Returns a value 0-100 representing position in the lightness scale (0 = dark, 100 = light)
  */
 export const calculateProfundidadePosition = (
-  colors1: string[],
-  colors2: string[],
-  extractedColors: { [key: string]: string },
-  comparisonField?: string
+  extractedColors: { [key: string]: string }
 ): number => {
-  // Get average lightness for each group
-  const getAvgLightness = (fields: string[]) => {
-    const validFields = fields.filter((f) => f in extractedColors)
-    if (validFields.length === 0) return 0
-    const properties = validFields.map((field) => getColorProperties(extractedColors[field]))
-    const hclValues = properties.map((p) => p.lightness)
-    return Math.round(hclValues.reduce((sum, l) => sum + l, 0) / properties.length)
-  }
+  const fields = Object.keys(extractedColors)
+  if (fields.length === 0) return 50
 
-  const group1Lightness = getAvgLightness(colors1)
-  const group2Lightness = getAvgLightness(colors2)
+  // Calculate average lightness across all colors
+  const properties = fields.map((field) => getColorProperties(extractedColors[field]))
+  const lightnessValues = properties.map((p) => p.lightness)
+  const avgLightness = Math.round(lightnessValues.reduce((sum, l) => sum + l, 0) / properties.length)
 
-  // Calculate contrast ratio
-  const contrastValue = group1Lightness !== 0 ? group2Lightness / group1Lightness : 0
-
-  // Get field-specific range or use default
-  let rangeMin: number = DEFAULT_RANGES.contrast.default.min
-  let rangeMax: number = DEFAULT_RANGES.contrast.default.max
-
-  if (comparisonField && comparisonField in DEFAULT_RANGES.contrast) {
-    const fieldRange = DEFAULT_RANGES.contrast[comparisonField as keyof typeof DEFAULT_RANGES.contrast]
-    if (fieldRange && typeof fieldRange === 'object' && 'min' in fieldRange && 'max' in fieldRange) {
-      rangeMin = (fieldRange as { min: number; max: number }).min
-      rangeMax = (fieldRange as { min: number; max: number }).max
-    }
-  }
-
-  // Calculate marker position (REVERSED: high contrast (low ratio) = 0, low contrast (high ratio) = 100)
-  let markerPosition: number
-  if (contrastValue <= rangeMin) {
-    markerPosition = 100
-  } else if (contrastValue >= rangeMax) {
-    markerPosition = 0
-  } else {
-    markerPosition = 100 - ((contrastValue - rangeMin) / (rangeMax - rangeMin)) * 100
-  }
-
-  return Math.round(markerPosition)
+  // Map average lightness (0-100) directly to the slider position
+  // Lower lightness = darker = lower value (Extremo Escuro)
+  // Higher lightness = lighter = higher value (Extremo Claro)
+  return avgLightness
 }
