@@ -3,6 +3,8 @@
 import { RefObject, useState, useEffect } from 'react'
 import { Badge, Button, Space, Steps, Tooltip, Modal } from 'antd'
 import { ArrowLeftOutlined, ArrowRightOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPalette } from '@fortawesome/free-solid-svg-icons'
 import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
 import { User, Analysis } from '@/lib/types'
@@ -15,6 +17,7 @@ import {
   getNextButtonTooltip,
 } from '../utils'
 import { PictureInPicture } from './PictureInPicture'
+import { ColorPaletteInPicture } from './ColorPaletteInPicture'
 
 interface AnalysisHeaderProps {
   user: User
@@ -62,6 +65,7 @@ export function AnalysisHeader({
   const [showExitModal, setShowExitModal] = useState(false)
   const [exitLoading, setExitLoading] = useState(false)
   const [showPictureInPicture, setShowPictureInPicture] = useState(false)
+  const [showColorPalette, setShowColorPalette] = useState(false)
 
   // Track scroll position
   useEffect(() => {
@@ -185,6 +189,14 @@ export function AnalysisHeader({
         />
       )}
 
+      {/* Color Palette Picture-in-Picture floating window */}
+      {showColorPalette && analysis.extracao && (
+        <ColorPaletteInPicture
+          extractedColors={analysis.extracao}
+          onClose={() => setShowColorPalette(false)}
+        />
+      )}
+
       <header
         className={`
           sticky top-0 z-50 transition-all duration-300 ease-in-out w-full
@@ -229,21 +241,45 @@ export function AnalysisHeader({
             className="text-gray-500 hover:text-gray-700"
           />
           
-          {user.face_photo_url && (
-            <Tooltip title="Clique para abrir foto como referência" placement="bottom">
-              <img
-                src={user.face_photo_url}
-                alt={user.name}
-                onClick={() => setShowPictureInPicture(true)}
-                className={`
-                  w-10 h-10 rounded-full object-cover border-2 border-white shadow-md
-                  transition-all duration-300 cursor-pointer
-                  hover:ring-2 hover:ring-primary/50 hover:scale-105
-                  ${isScrolled ? 'scale-80' : 'scale-100'}
-                `}
-              />
-            </Tooltip>
-          )}
+          {/* Photo and Tones Button Container */}
+          <div className="flex items-center gap-1">
+            {user.face_photo_url && (
+              <Tooltip title="Clique para abrir foto como referência" placement="bottom">
+                <img
+                  src={user.face_photo_url}
+                  alt={user.name}
+                  onClick={() => setShowPictureInPicture(true)}
+                  className={`
+                    w-10 h-10 rounded-full object-cover border-2 border-white shadow-md
+                    transition-all duration-300 cursor-pointer
+                    hover:ring-2 hover:ring-primary/50 hover:scale-105
+                    ${isScrolled ? 'scale-80' : 'scale-100'}
+                  `}
+                />
+              </Tooltip>
+            )}
+
+            {/* Tones Button */}
+            {analysis.extracao && Object.keys(analysis.extracao).length > 0 && (
+              <Tooltip title="Clique para abrir paleta de cores" placement="bottom">
+                <button
+                  onClick={() => setShowColorPalette(true)}
+                  className={`
+                    w-10 h-10 rounded-full flex items-center justify-center
+                    bg-gradient-to-br from-[#c9a88a] via-[#d4b89c] to-[#b39e87]
+                    border-2 border-white shadow-md
+                    transition-all duration-300 cursor-pointer
+                    hover:ring-2 hover:ring-[#947B62]/50 hover:scale-105
+                    ${isScrolled ? 'scale-80' : 'scale-100'}
+                  `}
+                  title="Paleta de Cores"
+                >
+                  <FontAwesomeIcon icon={faPalette} className="text-white text-lg" />
+                </button>
+              </Tooltip>
+            )}
+          </div>
+
           <div className={`min-w-0 transition-all duration-300`}>
             <h1 className={`
               font-fraunces font-bold text-secondary truncate transition-all duration-300

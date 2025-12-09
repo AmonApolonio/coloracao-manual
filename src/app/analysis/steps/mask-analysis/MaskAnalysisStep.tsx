@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Card } from 'antd'
 import MaskCanvas from './MaskCanvas'
+import PositionControlsPanel from './PositionControlsPanel'
 import { MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
 import { PROFUNDIDADE_ESCURA_COLORS, PROFUNDIDADE_CLARO_COLORS, TEMPERATURA_FRIA_COLORS, TEMPERATURA_QUENTE_COLORS, INTENSIDADE_SUAVE_COLORS, INTENSIDADE_BRILHANTE_COLORS, PROFUNDIDADE_ESCURA_COLORS2, PROFUNDIDADE_CLARO_COLORS2, TEMPERATURA_FRIA_COLORS2, TEMPERATURA_QUENTE_COLORS2, OURO_GRADIENT, PRATA_GRADIENT, type GradientConfig } from './constants/maskAnalysisColors'
 import { detectSeason, getSeasonVariants, getSeasonColors } from '../shared/seasonDetection'
@@ -129,6 +130,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
   const [selectedSeason, setSelectedSeason] = useState<ColorSeason | null>(
     (savedData?.colorSeason as ColorSeason) ?? null
   )
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   
   // Track the last loaded savedData to detect changes
   const lastLoadedDataRef = useRef<string | null>(null)
@@ -223,6 +225,12 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
 
   return (
     <div className="space-y-6">
+      <PositionControlsPanel
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        faceData={sharedFacePosition}
+        onDataChange={setSharedFacePosition}
+      />
       {isReadOnly && (
         <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded">
           🔒 Modo visualização - Esta análise já foi concluída
@@ -260,6 +268,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
                 gradient={comparison.leftGradient}
                 backgroundType={comparison.backgroundType || 'rays'}
                 desaturate={comparison.id === 'profundidade2'}
+                onSettingsClick={() => setSettingsModalOpen(true)}
               />
               {selectedMasks[comparison.id] === comparison.leftValue && (
                 <div className="absolute top-4 right-4 bg-secondary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
@@ -293,6 +302,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
                 gradient={comparison.rightGradient}
                 backgroundType={comparison.backgroundType || 'rays'}
                 desaturate={comparison.id === 'profundidade2'}
+                onSettingsClick={() => setSettingsModalOpen(true)}
               />
               {selectedMasks[comparison.id] === comparison.rightValue && (
                 <div className="absolute top-4 right-4 bg-secondary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
@@ -337,6 +347,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
                       faceData={sharedFacePosition}
                       onDataChange={handleFacePositionChange}
                       rayColors={getSeasonColors(seasonResult.season!, variant)}
+                      onSettingsClick={() => setSettingsModalOpen(true)}
                     />
                     {selectedSeason === getColorSeason(seasonResult.season!, variant) && (
                       <div className="absolute top-4 right-4 bg-secondary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">

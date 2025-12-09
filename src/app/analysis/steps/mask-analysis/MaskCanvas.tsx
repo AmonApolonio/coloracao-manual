@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef, forwardRef } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowsUpDownLeftRight } from '@fortawesome/free-solid-svg-icons'
 import FacePositionerCanvas, { type FacePositionerCanvasHandle } from './FacePositionerCanvas'
 import { type GradientConfig } from './constants/maskAnalysisColors'
 
@@ -19,6 +21,7 @@ interface MaskCanvasProps {
   backgroundType?: 'rays' | 'gradient'
   faceData?: FacePositionData
   desaturate?: boolean
+  onSettingsClick?: () => void
 }
 
 export interface MaskCanvasHandle {
@@ -27,7 +30,7 @@ export interface MaskCanvasHandle {
 }
 
 const MaskCanvas = forwardRef<MaskCanvasHandle, MaskCanvasProps>(
-  ({ userFacePhotoUrl, onDataChange, initialData, rayColors, gradient, backgroundType, faceData: externalFaceData, desaturate }, ref) => {
+  ({ userFacePhotoUrl, onDataChange, initialData, rayColors, gradient, backgroundType, faceData: externalFaceData, desaturate, onSettingsClick }, ref) => {
     const [internalFaceData, setInternalFaceData] = useState<FacePositionData>(
       initialData || { x: 160, y: 240, scale: 1 }
     )
@@ -52,7 +55,7 @@ const MaskCanvas = forwardRef<MaskCanvasHandle, MaskCanvasProps>(
     }))
 
     return (
-      <div>
+      <div className="relative">
         <div className="flex justify-center mb-4">
           <FacePositionerCanvas
             ref={canvasRef}
@@ -65,6 +68,18 @@ const MaskCanvas = forwardRef<MaskCanvasHandle, MaskCanvasProps>(
             desaturate={desaturate}
           />
         </div>
+        {onSettingsClick && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onSettingsClick()
+            }}
+            className="absolute top-0 left-2 w-10 h-10 rounded-lg bg-white/90 hover:bg-white text-gray-700 hover:text-secondary shadow-md transition-all hover:shadow-lg flex items-center justify-center"
+            title="Controles de posição"
+          >
+            <FontAwesomeIcon icon={faArrowsUpDownLeftRight} className="w-5 h-5" />
+          </button>
+        )}
       </div>
     )
   }
