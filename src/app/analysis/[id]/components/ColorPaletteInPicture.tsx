@@ -44,6 +44,56 @@ const COLOR_FIELD_LABELS: Record<string, string> = {
   boca: 'Boca',
 }
 
+const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : { r: 0, g: 0, b: 0 }
+}
+
+const rgbToHsl = (r: number, g: number, b: number): { h: number; s: number; l: number } => {
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h = 0
+  let s = 0
+  const l = (max + min) / 2
+
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+        break
+      case g:
+        h = ((b - r) / d + 2) / 6
+        break
+      case b:
+        h = ((r - g) / d + 4) / 6
+        break
+    }
+  }
+
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  }
+}
+
+const getDesaturatedColor = (hex: string): string => {
+  const rgb = hexToRgb(hex)
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b)
+  return `hsl(${hsl.h}, 0%, ${hsl.l}%)`
+}
+
 export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPaletteInPictureProps) {
   const { message } = AntdApp.useApp()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,6 +105,7 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 })
   const [isExpanded, setIsExpanded] = useState(false)
   const [preExpandState, setPreExpandState] = useState<{ position: Position; size: Size } | null>(null)
+  const [isGrayscale, setIsGrayscale] = useState(false)
 
   const MIN_WIDTH = 180
   const MIN_HEIGHT = 200
@@ -225,7 +276,18 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
           <div className="w-2 h-2 rounded-full bg-gray-300" />
           <div className="w-2 h-2 rounded-full bg-gray-300" />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsGrayscale(!isGrayscale)}
+            className={`px-2 py-1 text-xs rounded-full font-medium transition-all duration-150 ${
+              isGrayscale
+                ? 'bg-gray-700 text-white hover:bg-gray-800'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            title="Ativar/desativar escala de cinza"
+          >
+            {isGrayscale ? 'Escala Colorida' : 'Escala de Cinza'}
+          </button>
           <button
             onClick={toggleExpand}
             className="w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-black/5 transition-all duration-150"
@@ -264,7 +326,7 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
                 {/* Color swatch */}
                 <div
                   className="w-full aspect-square rounded-lg shadow-md border border-gray-200/50 transition-all duration-200 group-hover:shadow-lg group-hover:scale-105 flex items-center justify-center overflow-hidden"
-                  style={{ backgroundColor: hexColor }}
+                  style={{ backgroundColor: isGrayscale ? getDesaturatedColor(hexColor) : hexColor }}
                 >
                   {/* Overlay with text - visible on hover */}
                   <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
