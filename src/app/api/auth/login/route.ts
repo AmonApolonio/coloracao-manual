@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
 
     const validUsername = (process.env.APP_USERNAME || '').trim()
     const validPassword = (process.env.APP_PASSWORD || '').trim()
+    const adminUsername = (process.env.APP_ADMIN_USERNAME || '').trim()
     const adminPassword = (process.env.APP_ADMIN_PASSWORD || '').trim()
 
     // Validate credentials
@@ -16,12 +17,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (username === validUsername && (password === validPassword || password === adminPassword)) {
-      const isAdmin = password === adminPassword
+    // Check regular user credentials
+    if (username === validUsername && password === validPassword) {
       return NextResponse.json(
         {
           success: true,
-          isAdmin,
+          isAdmin: false,
+        },
+        { status: 200 }
+      )
+    }
+
+    // Check admin credentials
+    if (username === adminUsername && password === adminPassword) {
+      return NextResponse.json(
+        {
+          success: true,
+          isAdmin: true,
         },
         { status: 200 }
       )

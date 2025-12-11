@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { App as AntdApp } from 'antd'
 import { fetchAnalysisById, fetchUserById } from '@/lib/supabase'
+import { useAuth } from '@/app/context/AuthContext'
 import { User, Analysis, SVGVectorData } from '@/lib/types'
 import { PigmentAnalysisDataDB, MaskAnalysisDataDB } from '@/lib/types-db'
 import { isAllColorsExtracted, extractColorsFromData } from '../utils'
@@ -31,6 +32,7 @@ interface UseAnalysisDataReturn {
 
 export function useAnalysisData(analysisId: string): UseAnalysisDataReturn {
   const { message } = AntdApp.useApp()
+  const { isAdmin } = useAuth()
   
   const [user, setUser] = useState<User | null>(null)
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
@@ -82,7 +84,7 @@ export function useAnalysisData(analysisId: string): UseAnalysisDataReturn {
         setLoading(true)
 
         // Fetch analysis
-        const analysisData = await fetchAnalysisById(analysisId)
+        const analysisData = await fetchAnalysisById(analysisId, isAdmin)
 
         if (!analysisData) {
           // Let the page component handle the not found state
@@ -120,7 +122,7 @@ export function useAnalysisData(analysisId: string): UseAnalysisDataReturn {
     }
 
     loadData()
-  }, [analysisId, message])
+  }, [analysisId, isAdmin, message])
 
   return {
     user,

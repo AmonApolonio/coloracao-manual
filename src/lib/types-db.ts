@@ -38,11 +38,32 @@ export interface PigmentAnalysisDataDB {
 
 // ========== MASK ANALYSIS DATABASE TYPES ==========
 
+/**
+ * Individual mask selection
+ * Each mask can be selected independently
+ */
+export interface MaskSelection {
+  id: string; // e.g., "temperatura", "temperatura2", "intensidade", etc.
+  value: 'frio' | 'quente' | 'suave' | 'brilhante' | 'escuro' | 'claro' | 'ouro' | 'prata';
+}
+
+/**
+ * Calculated values from all selected masks
+ * temperatura, intensidade, profundidade can be 'neutro' if selections cancel out
+ */
+export type CalculatedMaskValue = 'frio' | 'quente' | 'suave' | 'brilhante' | 'escuro' | 'claro' | 'neutro' | null;
+
 export interface MaskAnalysisDataDB {
-  temperatura: 'fria' | 'quente' | null;
-  intensidade: 'suave' | 'brilhante' | null;
-  profundidade: 'escuro' | 'claro' | null;
+  // Individual mask selections - allows multiple selections per category
+  selectedMasks: MaskSelection[];
+  
+  // Calculated values derived from selectedMasks
+  // These are computed based on vote counting: which value has more selections
+  temperatura: CalculatedMaskValue;
+  intensidade: CalculatedMaskValue;
+  profundidade: CalculatedMaskValue;
   subtom: 'ouro' | 'prata' | null;
+  
   colorSeason?: ColorSeason | null;
   facePosition: {
     x: number;

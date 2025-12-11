@@ -1,6 +1,7 @@
 'use client'
 
 import { Tooltip, Typography, InputNumber } from 'antd'
+import { TemperaturaCalculationDetails, IntensidadeCalculationDetails } from '../../shared/PigmentAnalysisUtils'
 
 const { Text } = Typography
 
@@ -9,7 +10,6 @@ interface ColorScaleWithMarkerProps {
   markerPosition: number // 0-100 percentage
   label: string
   actualValue: string | number
-  displayValue: string | number
   rangeStart: number
   rangeEnd: number
   onRangeStartChange: (value: number) => void
@@ -18,6 +18,7 @@ interface ColorScaleWithMarkerProps {
   isReadOnly?: boolean
   rangesLocked?: boolean
   isAdmin?: boolean
+  calculationDetails?: TemperaturaCalculationDetails | IntensidadeCalculationDetails
 }
 
 export const ColorScaleWithMarker = ({
@@ -25,7 +26,6 @@ export const ColorScaleWithMarker = ({
   markerPosition,
   label,
   actualValue,
-  displayValue,
   rangeStart,
   rangeEnd,
   onRangeStartChange,
@@ -33,7 +33,8 @@ export const ColorScaleWithMarker = ({
   maxValue,
   isReadOnly,
   rangesLocked,
-  isAdmin
+  isAdmin,
+  calculationDetails
 }: ColorScaleWithMarkerProps) => {
   return (
     <div className="flex flex-col flex-1 min-w-0">
@@ -90,16 +91,55 @@ export const ColorScaleWithMarker = ({
             }}
           >
             <div className="w-2 h-full bg-red-500 border-y-0 border-x-[2px] border-white" />
-            {isAdmin && (
+            {(
               <Tooltip
-                title={`Valor: ${actualValue}`}
+                title={
+                  calculationDetails ? (
+                    <div className="text-left space-y-1 text-xs">
+                      {/* Check if it's TemperaturaCalculationDetails (has saturation field) */}
+                      {'saturation' in calculationDetails ? (
+                        <>
+                          <div className="text-xs font-semibold mb-2">Cálculo de Temperatura</div>
+                          <div>Hue: <span>{calculationDetails.actualHue}°</span></div>
+                          <div>Range: <span>{calculationDetails.hueStart}° → {calculationDetails.hueEnd}°</span></div>
+                          <div className="border-t border-gray-400 pt-1 mt-1">
+                            Re-mapeado: <span>{calculationDetails.remappedValue}</span>
+                          </div>
+                          <div>
+                            Saturação: <span>{calculationDetails.saturation}%</span>
+                          </div>
+                          <div>
+                            Ajuste: <span>-{calculationDetails.saturationAdjustment}</span>
+                          </div>
+                          <div className="border-t border-gray-400 pt-1 mt-1 font-semibold">
+                            Final: <span>{calculationDetails.finalValue}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-xs font-semibold mb-2">Cálculo de Intensidade</div>
+                          <div>Chroma: <span>{calculationDetails.actualChroma}</span></div>
+                          <div>Range: <span>{calculationDetails.chromaStart} → {calculationDetails.chromaEnd}</span></div>
+                          <div className="border-t border-gray-400 pt-1 mt-1 font-semibold">
+                            Re-mapeado: <span>{calculationDetails.remappedValue}</span>
+                          </div>
+                          <div className="border-t border-gray-400 pt-1 mt-1 font-semibold">
+                            Final: <span>{calculationDetails.finalValue}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    `Valor: ${actualValue}`
+                  )
+                }
                 color="#fff"
                 placement="top"
               >
                 <div
                   className="absolute bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-auto cursor-help"
                 >
-                  {displayValue}
+                  {calculationDetails?.finalValue ?? (typeof markerPosition === 'number' ? Math.round(markerPosition) : actualValue)}
                 </div>
               </Tooltip>
             )}

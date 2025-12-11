@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlassChart } from '@fortawesome/free-solid-svg-icons'
 import { PigmentTemperatureDataUI, ProfundidadeDataUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl } from '../../shared/colorConversion'
-import { getLabelColor, getLabelCategory, COLOR_FIELDS } from '../../shared/PigmentAnalysisUtils'
+import { getLabelColor, getLabelCategory, COLOR_FIELDS, getWeightForValue, calculateWeightedAverage } from '../../shared/PigmentAnalysisUtils'
 import { detectSeasonFromSliders } from '../../shared/seasonDetection'
 import { SliderWithAverageMarker } from './SliderWithAverageMarker'
 import { AverageCalculatorDialog } from './AverageCalculatorDialog'
@@ -40,17 +40,19 @@ const calculateAverageFromStep = (
   if (!stepData) return null
 
   if (stepKey === 'profundidade') {
-    // For profundidade
+    // For profundidade: just return the single value
     const profData = stepData as ProfundidadeDataUI
     return profData.value
   } else {
-    // For temperatura and intensidade (object)
+    // For temperatura and intensidade: use weighted average
     const tempData = stepData as PigmentTemperatureDataUI
     const values = Object.values(tempData)
       .filter((v) => v.temperature !== null)
       .map((v) => v.temperature as number)
+
     if (values.length === 0) return null
-    return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+
+    return calculateWeightedAverage(values)
   }
 }
 
@@ -62,7 +64,7 @@ const getDesaturatedColor = (hex: string): string => {
 }
 
 /**
- * Build tooltip content showing individual values and average calculation
+ * Build tooltip content showing individual values with weights and weighted average calculation
  */
 const buildAverageTooltipContent = (
   stepData: PigmentTemperatureDataUI | ProfundidadeDataUI | undefined,
@@ -83,23 +85,35 @@ const buildAverageTooltipContent = (
   } else {
     // For temperatura and intensidade (object)
     const tempData = stepData as PigmentTemperatureDataUI
-    const values = Object.entries(tempData)
+    const items = Object.entries(tempData)
       .filter(([, v]) => v.temperature !== null)
-      .map(([key, v]) => ({ key, value: v.temperature as number }))
+      .map(([key, v]) => {
+        const value = v.temperature as number
+        const weight = getWeightForValue(value)
+        return { key, value, weight }
+      })
 
-    if (values.length === 0) return 'Sem dados'
+    if (items.length === 0) return 'Sem dados'
 
-    const numValues = values.map(v => v.value)
     return (
-      <div className="text-xs space-y-1">
-        <div className="font-semibold mb-2">Valores individuais:</div>
-        {values.map(({ key, value }, idx) => (
-          <div key={idx} className="text-gray-700">
-            • {key}: {value}
+      <div className="text-xs space-y-1 max-w-xs">
+        <div className="font-semibold mb-2">Cálculo de Média Ponderada:</div>
+        <div className="space-y-1 text-gray-700 mb-2">
+          {items.map(({ key, value, weight }, idx) => (
+            <div key={idx} className="flex justify-between gap-2">
+              <span>• {key}: {value}</span>
+              <span className="font-semibold text-blue-600">(peso {weight})</span>
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-gray-400 pt-2 font-semibold">
+          <div>Fórmula:</div>
+          <div className="text-gray-700 mt-1">
+            ({items.map(item => `${item.value}×${item.weight}`).join(' + ')}) ÷ {items.reduce((sum, item) => sum + item.weight, 0)}
           </div>
-        ))}
-        <div className="border-t border-gray-400 pt-1 mt-2 font-semibold">
-          Média: ({numValues.join(' + ')}) / {numValues.length} = <span>{average}</span>
+          <div className="text-blue-600 mt-2">
+            Resultado: <span>{average}</span>
+          </div>
         </div>
       </div>
     )

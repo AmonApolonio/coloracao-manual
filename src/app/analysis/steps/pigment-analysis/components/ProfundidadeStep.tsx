@@ -4,7 +4,8 @@ import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { Slider, Tag, Typography, Tooltip } from 'antd'
 import { ProfundidadeDataUI } from '@/lib/types-ui'
 import { getColorProperties, hexToRgb, rgbToHsl } from '../../shared/colorConversion'
-import { COLOR_FIELDS, getLabelColor, getLabelCategory } from '../../shared/PigmentAnalysisUtils'
+import { calculateWeightedAverage, COLOR_FIELDS, getLabelColor, getWeightForValue } from '../../shared/PigmentAnalysisUtils'
+import { getProfundidadeExtremosData, calculateProfundidadeFromContrast, getProfundidadeCalculationDetails } from '../../shared/profundidadeUtils'
 
 const { Text } = Typography
 
@@ -98,23 +99,16 @@ export const ProfundidadeStep = ({
     }
   })
 
-  // Calculate average lightness across all colors
-  const avgLightness = colorLightnessData.length > 0
-    ? Math.round(colorLightnessData.reduce((sum, c) => sum + c.lightness, 0) / colorLightnessData.length)
-    : 50
+  // Calculate weighted average luminosidade média
+  const avgLightness = calculateWeightedAverage(colorLightnessData.map((c) => c.lightness)) ?? 50
 
-  // Find min and max lightness for difference calculation
-  const minLightness = colorLightnessData.length > 0
-    ? Math.min(...colorLightnessData.map(c => c.lightness))
-    : 0
-  const maxLightness = colorLightnessData.length > 0
-    ? Math.max(...colorLightnessData.map(c => c.lightness))
-    : 100
-  const lightnessDifference = maxLightness - minLightness
+  // Get extremos data (min/max lightness and colors)
+  const extremosData = getProfundidadeExtremosData(colorLightnessData)
+  const { minLightness, maxLightness, lightnessDifference, darkestColor, lightestColor } = extremosData
 
-  // Find the darkest and lightest colors for tooltip
-  const darkestColor = colorLightnessData.find(c => c.lightness === minLightness)
-  const lightestColor = colorLightnessData.find(c => c.lightness === maxLightness)
+  // Calculate profundidade marker position based on contrast and luminosity
+  const calculatedProfundidade = calculateProfundidadeFromContrast(lightnessDifference, avgLightness)
+  const profundidadeDetails = getProfundidadeCalculationDetails(lightnessDifference, avgLightness)
 
   return (
     <div className="space-y-6">
@@ -144,14 +138,20 @@ export const ProfundidadeStep = ({
             <Tooltip
               title={
                 <div className="text-xs">
-                  <div className="font-semibold mb-1">Cálculo da Média:</div>
-                  <div className="space-y-0.5">
-                    {colorLightnessData.map((c, i) => (
-                      <div key={c.field}>{c.label}: {c.lightness}%</div>
-                    ))}
+                  <div className="font-semibold mb-1">Cálculo da Média Ponderada:</div>
+                  <div className="space-y-0.5 mb-2">
+                    {colorLightnessData.map((c) => {
+                      return (
+                        <div key={c.field} className="flex justify-between gap-2">
+                          <span>{c.label}:</span>
+                          <span>{c.lightness}% <span className="text-gray-400">(peso {getWeightForValue(c.lightness)})</span></span>
+                        </div>
+                      )
+                    })}
                   </div>
-                  <div className="border-t border-gray-400 mt-1 pt-1">
-                    ({colorLightnessData.map(c => c.lightness).join(' + ')}) / {colorLightnessData.length} = <span className="font-semibold">{avgLightness}%</span>
+                  <div className="border-t border-gray-400 pt-1">
+                    <div className="text-xs mb-1">Soma ponderada / Peso total = Média</div>
+                    <div className="font-semibold">Resultado: {avgLightness}%</div>
                   </div>
                 </div>
               }
@@ -211,6 +211,34 @@ export const ProfundidadeStep = ({
               <div className="absolute top-0 h-full w-px bg-white/30" style={{ left: '47%' }} />
               <div className="absolute top-0 h-full w-px bg-white/30" style={{ left: '53%' }} />
               <div className="absolute top-0 h-full w-px bg-white/30" style={{ left: '87.5%' }} />
+
+              {/* Profundidade Marker - Red line like in ColorScaleWithMarker */}
+              <Tooltip
+                title={
+                  <div className="text-xs space-y-1">
+                    <div className="font-semibold">Profundidade</div>
+                    <div>Contraste: {Math.round(profundidadeDetails.lightnessDifference)}</div>
+                    <div>Luminosidade: {Math.round(profundidadeDetails.luminosidadeMedia)}</div>
+                    <div className="border-t border-gray-400 pt-1">Resultado: {Math.round(profundidadeDetails.profundidadeValue)}</div>
+                  </div>
+                }
+                color="#fff"
+                placement="top"
+              >
+                <div
+                  className="absolute h-16 flex flex-col items-center justify-center pointer-events-auto"
+                  style={{
+                    left: `${Math.max(0, Math.min(100, calculatedProfundidade))}%`,
+                    transform: 'translateX(-50%)',
+                    zIndex: 20,
+                  }}
+                >
+                  <div className="w-2 h-full bg-red-500 border-y-0 border-x-[2px] border-white cursor-help" />
+                  <div className="absolute bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-auto cursor-help">
+                    {Math.round(profundidadeDetails.profundidadeValue)}
+                  </div>
+                </div>
+              </Tooltip>
             </div>
             
             {/* Scale labels */}
@@ -275,7 +303,7 @@ export const ProfundidadeStep = ({
           />
           <div className="flex justify-between mt-2">
             <Text type="secondary" className="text-xs">Extremo Escuro</Text>
-            <Text type="secondary" className="text-xs">Neutro Puro</Text>
+            <Text type="secondary" className="text-xs">neutro Puro</Text>
             <Text type="secondary" className="text-xs">Extremo Claro</Text>
           </div>
         </div>

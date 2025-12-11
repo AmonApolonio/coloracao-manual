@@ -4,10 +4,38 @@ import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Card } from 'antd'
 import MaskCanvas from './MaskCanvas'
 import PositionControlsPanel from './PositionControlsPanel'
-import { MaskAnalysisDataDB, ColorSeason } from '@/lib/types-db'
-import { PROFUNDIDADE_ESCURA_COLORS, PROFUNDIDADE_CLARO_COLORS, TEMPERATURA_FRIA_COLORS, TEMPERATURA_QUENTE_COLORS, INTENSIDADE_SUAVE_COLORS, INTENSIDADE_BRILHANTE_COLORS, PROFUNDIDADE_ESCURA_COLORS2, PROFUNDIDADE_CLARO_COLORS2, TEMPERATURA_FRIA_COLORS2, TEMPERATURA_QUENTE_COLORS2, OURO_GRADIENT, PRATA_GRADIENT, type GradientConfig } from './constants/maskAnalysisColors'
+import { MaskAnalysisDataDB, ColorSeason, MaskSelection } from '@/lib/types-db'
+import {
+  PROFUNDIDADE_ESCURA_COLORS,
+  PROFUNDIDADE_CLARO_COLORS,
+  TEMPERATURA_FRIA_COLORS,
+  TEMPERATURA_QUENTE_COLORS,
+  INTENSIDADE_SUAVE_COLORS,
+  INTENSIDADE_BRILHANTE_COLORS,
+  INTENSIDADE_SUAVE_COLORS2,
+  INTENSIDADE_BRILHANTE_COLORS2,
+  INTENSIDADE_SUAVE_COLORS3,
+  INTENSIDADE_BRILHANTE_COLORS3,
+  PROFUNDIDADE_ESCURA_COLORS2,
+  PROFUNDIDADE_CLARO_COLORS2,
+  PROFUNDIDADE_ESCURA_COLORS3,
+  PROFUNDIDADE_CLARO_COLORS3,
+  PROFUNDIDADE_ESCURA_COLORS4,
+  PROFUNDIDADE_CLARO_COLORS4,
+  TEMPERATURA_FRIA_COLORS2,
+  TEMPERATURA_QUENTE_COLORS2,
+  OURO_GRADIENT,
+  PRATA_GRADIENT,
+  type GradientConfig,
+} from './constants/maskAnalysisColors'
 import { detectSeason, getSeasonVariants, getSeasonColors } from '../shared/seasonDetection'
 import { getColorSeason } from '@/lib/types'
+import {
+  calculateCategoryValue,
+  getMaskSelectionExplanation,
+  toggleMaskSelection,
+  isMaskSelected,
+} from './maskSelectionUtils'
 
 // Helper function to parse markdown bold syntax and render with JSX
 function renderSuggestionText(text: string): React.ReactNode {
@@ -38,11 +66,11 @@ interface MaskAnalysisStepProps {
 }
 
 interface MaskComparison {
-  id: 'temperatura' | 'temperatura2' | 'intensidade' | 'profundidade' | 'profundidade2' | 'subtom'
+  id: string
   title: string
   leftLabel: string
   rightLabel: string
-  leftValue: 'fria' | 'suave' | 'escuro' | 'prata'
+  leftValue: 'frio' | 'suave' | 'escuro' | 'prata'
   rightValue: 'quente' | 'brilhante' | 'claro' | 'ouro'
   leftColors?: string[]
   rightColors?: string[]
@@ -55,19 +83,19 @@ const MASK_COMPARISONS: MaskComparison[] = [
   {
     id: 'temperatura',
     title: 'Temperatura',
-    leftLabel: 'Fria',
+    leftLabel: 'Frio',
     rightLabel: 'Quente',
-    leftValue: 'fria',
+    leftValue: 'frio',
     rightValue: 'quente',
     leftColors: TEMPERATURA_FRIA_COLORS,
     rightColors: TEMPERATURA_QUENTE_COLORS,
   },
   {
     id: 'temperatura2',
-    title: 'Temperatura (2)',
-    leftLabel: 'Fria',
+    title: 'Temperatura',
+    leftLabel: 'Frio',
     rightLabel: 'Quente',
-    leftValue: 'fria',
+    leftValue: 'frio',
     rightValue: 'quente',
     leftColors: TEMPERATURA_FRIA_COLORS2,
     rightColors: TEMPERATURA_QUENTE_COLORS2,
@@ -94,6 +122,36 @@ const MASK_COMPARISONS: MaskComparison[] = [
     rightColors: INTENSIDADE_BRILHANTE_COLORS,
   },
   {
+    id: 'intensidade2',
+    title: 'Intensidade',
+    leftLabel: 'Suave',
+    rightLabel: 'Brilhante',
+    leftValue: 'suave',
+    rightValue: 'brilhante',
+    leftColors: INTENSIDADE_SUAVE_COLORS2,
+    rightColors: INTENSIDADE_BRILHANTE_COLORS2,
+  },
+  {
+    id: 'intensidade3',
+    title: 'Intensidade',
+    leftLabel: 'Suave',
+    rightLabel: 'Brilhante',
+    leftValue: 'suave',
+    rightValue: 'brilhante',
+    leftColors: INTENSIDADE_SUAVE_COLORS3,
+    rightColors: INTENSIDADE_BRILHANTE_COLORS3,
+  },
+  {
+    id: 'profundidade2',
+    title: 'Profundidade',
+    leftLabel: 'Escuro',
+    rightLabel: 'Claro',
+    leftValue: 'escuro',
+    rightValue: 'claro',
+    leftColors: PROFUNDIDADE_ESCURA_COLORS2,
+    rightColors: PROFUNDIDADE_CLARO_COLORS2,
+  },
+  {
     id: 'profundidade',
     title: 'Profundidade',
     leftLabel: 'Escuro',
@@ -104,60 +162,67 @@ const MASK_COMPARISONS: MaskComparison[] = [
     rightColors: PROFUNDIDADE_CLARO_COLORS,
   },
   {
-    id: 'profundidade2',
-    title: 'Profundidade (2)',
+    id: 'profundidade3',
+    title: 'Profundidade',
     leftLabel: 'Escuro',
     rightLabel: 'Claro',
     leftValue: 'escuro',
     rightValue: 'claro',
-    leftColors: PROFUNDIDADE_ESCURA_COLORS2,
-    rightColors: PROFUNDIDADE_CLARO_COLORS2,
+    leftColors: PROFUNDIDADE_ESCURA_COLORS3,
+    rightColors: PROFUNDIDADE_CLARO_COLORS3,
+  },
+  {
+    id: 'profundidade4',
+    title: 'Profundidade',
+    leftLabel: 'Escuro',
+    rightLabel: 'Claro',
+    leftValue: 'escuro',
+    rightValue: 'claro',
+    leftColors: PROFUNDIDADE_ESCURA_COLORS4,
+    rightColors: PROFUNDIDADE_CLARO_COLORS4,
   },
 ]
 
-const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, savedData, onDataChange, isReadOnly }) => {
+const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({
+  userFacePhotoUrl,
+  savedData,
+  onDataChange,
+  isReadOnly,
+}) => {
   const [sharedFacePosition, setSharedFacePosition] = useState<FacePositionData>(
     savedData?.facePosition || { x: 160, y: 240, scale: 1 }
   )
-  const [selectedMasks, setSelectedMasks] = useState<{ [key: string]: 'fria' | 'quente' | 'suave' | 'brilhante' | 'escuro' | 'claro' | 'ouro' | 'prata' | null }>({
-    temperatura: savedData?.temperatura ?? null,
-    temperatura2: savedData?.temperatura ?? null,
-    intensidade: savedData?.intensidade ?? null,
-    profundidade: savedData?.profundidade ?? null,
-    profundidade2: savedData?.profundidade ?? null,
-    subtom: savedData?.subtom ?? null,
-  })
+
+  // Store individual mask selections
+  const [selectedMasks, setSelectedMasks] = useState<MaskSelection[]>(
+    savedData?.selectedMasks || []
+  )
+
   const [selectedSeason, setSelectedSeason] = useState<ColorSeason | null>(
     (savedData?.colorSeason as ColorSeason) ?? null
   )
+
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
-  
+
   // Track the last loaded savedData to detect changes
   const lastLoadedDataRef = useRef<string | null>(null)
   // Track if we're currently loading saved data to prevent notifying parent
   const isLoadingDataRef = useRef(false)
-  
+
   // Load saved data when it becomes available or changes
   useEffect(() => {
     if (savedData) {
       const dataHash = JSON.stringify(savedData)
-      
+
       // Only load if the data has changed
       if (lastLoadedDataRef.current !== dataHash) {
         isLoadingDataRef.current = true
         lastLoadedDataRef.current = dataHash
-        
+
         setSharedFacePosition(savedData.facePosition || { x: 160, y: 240, scale: 1 })
-        setSelectedMasks({
-          temperatura: savedData.temperatura ?? null,
-          temperatura2: savedData.temperatura ?? null,
-          intensidade: savedData.intensidade ?? null,
-          profundidade: savedData.profundidade ?? null,
-          profundidade2: savedData.profundidade ?? null,
-          subtom: savedData.subtom ?? null,
-        })
+        setSelectedMasks(savedData.selectedMasks || [])
         setSelectedSeason((savedData.colorSeason as ColorSeason) ?? null)
-        
+
         // Reset the loading flag after a tick to allow state to settle
         setTimeout(() => {
           isLoadingDataRef.current = false
@@ -166,62 +231,83 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
     }
   }, [savedData])
 
-  // Detect season based on selections
-  const seasonResult = detectSeason(
-    selectedMasks.temperatura as 'fria' | 'quente' | null,
-    selectedMasks.intensidade as 'suave' | 'brilhante' | null,
-    selectedMasks.profundidade as 'escuro' | 'claro' | null
+  // Calculate final values from selected masks
+  const calculatedTemperatura = calculateCategoryValue(selectedMasks, 'temperatura')
+  const calculatedIntensidade = calculateCategoryValue(selectedMasks, 'intensidade')
+  const calculatedProfundidade = calculateCategoryValue(selectedMasks, 'profundidade')
+
+  // Get subtom selection (only one allowed)
+  const subtomSelection = selectedMasks.find(
+    (m) => m.id === 'subtom'
   )
 
-  // Emit data changes to parent - only emit primary temperature and profundidade
-  // temperatura2 and profundidade2 are synced locally but not saved to DB
-  // Skip notification when we're loading data from saved state to prevent loops
+  // Detect season based on calculated values
+  const seasonResult = detectSeason(
+    calculatedTemperatura as 'frio' | 'quente' | 'neutro' | null,
+    calculatedIntensidade as 'suave' | 'brilhante' | 'neutro' | null,
+    calculatedProfundidade as 'escuro' | 'claro' | 'neutro' | null
+  )
+
+  // Emit data changes to parent
   useEffect(() => {
     if (isLoadingDataRef.current) return
-    
+
     onDataChange?.({
-      temperatura: selectedMasks.temperatura as 'fria' | 'quente' | null,
-      intensidade: selectedMasks.intensidade as 'suave' | 'brilhante' | null,
-      profundidade: selectedMasks.profundidade as 'escuro' | 'claro' | null,
-      subtom: selectedMasks.subtom as 'ouro' | 'prata' | null,
+      selectedMasks,
+      temperatura: calculatedTemperatura,
+      intensidade: calculatedIntensidade,
+      profundidade: calculatedProfundidade,
+      subtom: subtomSelection ? (subtomSelection.value as 'ouro' | 'prata') : null,
       colorSeason: selectedSeason,
       facePosition: sharedFacePosition,
     })
-  }, [selectedMasks, sharedFacePosition, selectedSeason, onDataChange])
+  }, [
+    selectedMasks,
+    sharedFacePosition,
+    selectedSeason,
+    calculatedTemperatura,
+    calculatedIntensidade,
+    calculatedProfundidade,
+    subtomSelection,
+    onDataChange,
+  ])
 
   const handleFacePositionChange = useCallback((data: FacePositionData) => {
     setSharedFacePosition(data)
   }, [])
 
-  const handleMaskSelection = useCallback((comparisonId: string, value: 'fria' | 'quente' | 'suave' | 'brilhante' | 'escuro' | 'claro' | 'ouro' | 'prata') => {
-    if (isReadOnly) return
-    
-    setSelectedMasks((prev) => {
-      const updated = {
-        ...prev,
-        [comparisonId]: prev[comparisonId] === value ? null : value,
+  const handleMaskSelection = useCallback(
+    (
+      comparisonId: string,
+      value: 'frio' | 'quente' | 'suave' | 'brilhante' | 'escuro' | 'claro' | 'ouro' | 'prata'
+    ) => {
+      if (isReadOnly) return
+
+      // For subtom, only allow one selection
+      if (comparisonId === 'subtom') {
+        const existingSubtom = selectedMasks.find((m) => m.id === 'subtom')
+        if (existingSubtom && existingSubtom.value === value) {
+          // Toggle off
+          setSelectedMasks(selectedMasks.filter((m) => m.id !== 'subtom'))
+        } else {
+          // Replace existing or add new
+          const filtered = selectedMasks.filter((m) => m.id !== 'subtom')
+          setSelectedMasks([...filtered, { id: comparisonId, value }])
+        }
+      } else {
+        // For other masks, allow multiple selections
+        setSelectedMasks(toggleMaskSelection(selectedMasks, comparisonId, value))
       }
 
-      // Sync temperatura and temperatura2 - both rows always show the same value
-      if (comparisonId === 'temperatura') {
-        updated.temperatura2 = updated.temperatura
-      } else if (comparisonId === 'temperatura2') {
-        updated.temperatura = updated.temperatura2
-      }
+      // Clear selected season when any mask changes (since season depends on the values)
+      setSelectedSeason(null)
+    },
+    [selectedMasks, isReadOnly]
+  )
 
-      // Sync profundidade and profundidade2 - both rows always show the same value
-      if (comparisonId === 'profundidade') {
-        updated.profundidade2 = updated.profundidade
-      } else if (comparisonId === 'profundidade2') {
-        updated.profundidade = updated.profundidade2
-      }
-
-      return updated
-    })
-    
-    // Clear selected season when any mask changes (since season depends on the other options)
-    setSelectedSeason(null)
-  }, [isReadOnly])
+  const temperatureExplanation = getMaskSelectionExplanation(selectedMasks, 'temperatura')
+  const intensidadeExplanation = getMaskSelectionExplanation(selectedMasks, 'intensidade')
+  const profundidadeExplanation = getMaskSelectionExplanation(selectedMasks, 'profundidade')
 
   return (
     <div className="space-y-6">
@@ -231,11 +317,45 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
         faceData={sharedFacePosition}
         onDataChange={setSharedFacePosition}
       />
+
       {isReadOnly && (
         <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded">
           🔒 Modo visualização - Esta análise já foi concluída
         </div>
       )}
+
+      {/* Display current parameters - Fixed Floating Component */}
+      {selectedMasks.length > 0 && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-white shadow-lg rounded-lg p-3 border border-gray-200">
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">
+              Parâmetros
+            </span>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500">Temp:</span>
+                <span className={`font-semibold ${!calculatedTemperatura ? 'text-gray-400' : 'text-secondary'}`}>
+                  {calculatedTemperatura || '-'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500">Int:</span>
+                <span className={`font-semibold ${!calculatedIntensidade ? 'text-gray-400' : 'text-secondary'}`}>
+                  {calculatedIntensidade || '-'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500">Prof:</span>
+                <span className={`font-semibold ${!calculatedProfundidade ? 'text-gray-400' : 'text-secondary'}`}>
+                  {calculatedProfundidade || '-'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mask Comparisons */}
       {MASK_COMPARISONS.map((comparison) => (
         <Card key={comparison.id} className="border-secondary border-2 rounded-xl">
           <div className="mb-6">
@@ -243,7 +363,9 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
               {comparison.title}
             </h2>
             <p className="text-sm text-gray-600">
-              {isReadOnly ? 'Visualize a seleção da máscara.' : 'Selecione qual máscara melhor se adapta ao rosto.'}
+              {isReadOnly
+                ? 'Visualize a seleção da máscara.'
+                : 'Selecione uma ou ambas as máscaras.'}
             </p>
           </div>
 
@@ -251,11 +373,15 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
             {/* Left Option */}
             <div
               className={`relative ${isReadOnly ? '' : 'cursor-pointer'} transition-all duration-200 rounded-xl p-1 ${
-                selectedMasks[comparison.id] === comparison.leftValue
+                isMaskSelected(selectedMasks, comparison.id, comparison.leftValue)
                   ? 'ring-2 ring-secondary'
-                  : isReadOnly ? 'border-2 border-gray-200' : 'border-2 border-dashed border-gray-300 hover:border-secondary'
+                  : isReadOnly
+                    ? 'border-2 border-gray-200'
+                    : 'border-2 border-dashed border-gray-300 hover:border-secondary'
               }`}
-              onClick={() => !isReadOnly && handleMaskSelection(comparison.id, comparison.leftValue)}
+              onClick={() =>
+                !isReadOnly && handleMaskSelection(comparison.id, comparison.leftValue)
+              }
             >
               <div className="my-2 text-center">
                 <h3 className="text-sm font-semibold text-gray-700">{comparison.leftLabel}</h3>
@@ -270,7 +396,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
                 desaturate={comparison.id === 'profundidade2'}
                 onSettingsClick={() => setSettingsModalOpen(true)}
               />
-              {selectedMasks[comparison.id] === comparison.leftValue && (
+              {isMaskSelected(selectedMasks, comparison.id, comparison.leftValue) && (
                 <div className="absolute top-4 right-4 bg-secondary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
                   ✓
                 </div>
@@ -279,17 +405,21 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
 
             {/* Divider */}
             <div className="flex items-center justify-center h-full">
-              <span className="text-gray-400 text-4xl font-bold p-4">×</span>
+              <span className="text-gray-400 text-4xl font-bold p-4">+</span>
             </div>
 
             {/* Right Option */}
             <div
               className={`relative ${isReadOnly ? '' : 'cursor-pointer'} transition-all duration-200 rounded-xl p-1 ${
-                selectedMasks[comparison.id] === comparison.rightValue
+                isMaskSelected(selectedMasks, comparison.id, comparison.rightValue)
                   ? 'ring-2 ring-secondary'
-                  : isReadOnly ? 'border-2 border-gray-200' : 'border-2 border-dashed border-gray-300 hover:border-secondary'
+                  : isReadOnly
+                    ? 'border-2 border-gray-200'
+                    : 'border-2 border-dashed border-gray-300 hover:border-secondary'
               }`}
-              onClick={() => !isReadOnly && handleMaskSelection(comparison.id, comparison.rightValue)}
+              onClick={() =>
+                !isReadOnly && handleMaskSelection(comparison.id, comparison.rightValue)
+              }
             >
               <div className="my-2 text-center">
                 <h3 className="text-sm font-semibold text-gray-700">{comparison.rightLabel}</h3>
@@ -304,7 +434,7 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
                 desaturate={comparison.id === 'profundidade2'}
                 onSettingsClick={() => setSettingsModalOpen(true)}
               />
-              {selectedMasks[comparison.id] === comparison.rightValue && (
+              {isMaskSelected(selectedMasks, comparison.id, comparison.rightValue) && (
                 <div className="absolute top-4 right-4 bg-secondary text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
                   ✓
                 </div>
@@ -314,8 +444,8 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
         </Card>
       ))}
 
-      {/* Season Selection - Shows after all masks are selected */}
-      {selectedMasks.temperatura && selectedMasks.intensidade && selectedMasks.profundidade && (
+      {/* Season Selection - Shows after all parameters are set */}
+      {calculatedTemperatura && calculatedIntensidade && calculatedProfundidade && (
         <>
           {seasonResult.valid && seasonResult.season && (
             <Card className="border-secondary border-2 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50">
@@ -328,18 +458,28 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
                 </p>
               </div>
 
-              <div className="grid items-start" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+              <div
+                className="grid items-start"
+                style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}
+              >
                 {getSeasonVariants(seasonResult.season!).map((variant) => (
                   <div
                     key={variant}
-                    className={`relative ${isReadOnly ? '' : 'cursor-pointer'} transition-all duration-200 rounded-xl p-4 text-center ${
+                    className={`relative ${
+                      isReadOnly ? '' : 'cursor-pointer'
+                    } transition-all duration-200 rounded-xl p-2 text-center ${
                       selectedSeason === getColorSeason(seasonResult.season!, variant)
                         ? 'ring-2 ring-secondary bg-white'
-                        : isReadOnly ? 'border-2 border-gray-200 bg-gray-50' : 'border-2 border-dashed border-gray-300 hover:border-secondary bg-gray-50'
+                        : isReadOnly
+                          ? 'border-2 border-gray-200 bg-gray-50'
+                          : 'border-2 border-dashed border-gray-300 hover:border-secondary bg-gray-50'
                     }`}
-                    onClick={() => !isReadOnly && setSelectedSeason(getColorSeason(seasonResult.season!, variant))}
+                    onClick={() =>
+                      !isReadOnly &&
+                      setSelectedSeason(getColorSeason(seasonResult.season!, variant))
+                    }
                   >
-                    <div className="mb-4">
+                    <div className="mb-2">
                       <h3 className="font-semibold text-gray-700">{variant}</h3>
                     </div>
                     <MaskCanvas
@@ -364,23 +504,30 @@ const MaskAnalysisStep: React.FC<MaskAnalysisStepProps> = ({ userFacePhotoUrl, s
             <Card className="border-red-400 border-2 rounded-xl bg-red-50">
               <div className="mb-4">
                 <h2 className="text-2xl font-fraunces font-bold text-red-600 mb-2">
-                  Combinação Inválida
+                  {seasonResult.hasneutroValue
+                    ? 'Parâmetro(s) neutro(s)'
+                    : 'Combinação Inválida'}
                 </h2>
                 <p className="text-sm text-gray-700 mb-4">
-                  A combinação selecionada (Temperatura: <strong>{selectedMasks.temperatura}</strong>, 
-                  Intensidade: <strong>{selectedMasks.intensidade}</strong>, 
-                  Profundidade: <strong>{selectedMasks.profundidade}</strong>) não corresponde a nenhuma estação.
+                  A combinação selecionada não corresponde a nenhuma estação de cores válida.
                 </p>
               </div>
 
               <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Sugestões:</p>
+                <p className="text-sm font-semibold text-gray-700 mb-3">O que fazer para conseguir as seguintes estações:</p>
                 <ul className="space-y-2">
                   {seasonResult.suggestions?.map((suggestion, idx) => (
                     suggestion.trim() === '' ? (
                       <div key={idx} />
-                    ) : suggestion.startsWith('**Outras') ? (
-                      <li key={idx} className="text-sm font-semibold text-gray-700 mt-4 pt-3 border-t border-gray-200">
+                    ) : suggestion.startsWith('**Outras') || suggestion.startsWith('❌') ? (
+                      <li
+                        key={idx}
+                        className="text-sm font-semibold text-gray-700 mt-4 pt-3 border-t border-gray-200"
+                      >
+                        {renderSuggestionText(suggestion)}
+                      </li>
+                    ) : suggestion.startsWith('  •') ? (
+                      <li key={idx} className="text-sm text-gray-600 ml-4">
                         {renderSuggestionText(suggestion)}
                       </li>
                     ) : (

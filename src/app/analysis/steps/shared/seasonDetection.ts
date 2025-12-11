@@ -12,24 +12,35 @@ export type SeasonResult = {
   variant?: SeasonVariant
   suggestions?: string[]
   fullName?: ColorSeason
+  hasneutroValue?: boolean
 }
 
 export function detectSeason(
-  temperatura: 'fria' | 'quente' | null,
-  intensidade: 'suave' | 'brilhante' | null,
-  profundidade: 'escuro' | 'claro' | null
+  temperatura: 'frio' | 'quente' | 'neutro' | null,
+  intensidade: 'suave' | 'brilhante' | 'neutro' | null,
+  profundidade: 'escuro' | 'claro' | 'neutro' | null
 ): SeasonResult {
-  // Check if all selections are made
+  // Check if all selections are made (allow neutro)
   if (!temperatura || !intensidade || !profundidade) {
     return { valid: false }
+  }
+
+  // Check if any value is 'neutro' - cannot form valid season
+  if (temperatura === 'neutro' || intensidade === 'neutro' || profundidade === 'neutro') {
+    const suggestions = generateSuggestionsWithneutro(temperatura, intensidade, profundidade)
+    return {
+      valid: false,
+      suggestions,
+      hasneutroValue: true,
+    }
   }
 
   // Valid combinations mapping (using the actual Portuguese forms from the UI)
   const validCombinations: Record<string, { season: Season; variant: SeasonVariant }> = {
     'quente-brilhante-claro': { season: 'Primavera', variant: 'Brilhante' },
     'quente-suave-escuro': { season: 'Outono', variant: 'Quente' },
-    'fria-suave-claro': { season: 'Verão', variant: 'Frio' },
-    'fria-brilhante-escuro': { season: 'Inverno', variant: 'Frio' },
+    'frio-suave-claro': { season: 'Verão', variant: 'Frio' },
+    'frio-brilhante-escuro': { season: 'Inverno', variant: 'Frio' },
   }
 
   const key = `${temperatura}-${intensidade}-${profundidade}`
@@ -54,17 +65,103 @@ export function detectSeason(
   }
 }
 
+/**
+ * Generate suggestions when one or more values are 'neutro'
+ */
+function generateSuggestionsWithneutro(
+  temperatura: string,
+  intensidade: string,
+  profundidade: string
+): string[] {
+  const suggestions: string[] = []
+  const neutroFields: string[] = []
+  const nonneutroFields: { label: string; value: string; type: string }[] = []
+
+  // Identify which fields are neutro
+  if (temperatura === 'neutro') {
+    neutroFields.push('Temperatura')
+  } else {
+    nonneutroFields.push({ label: temperatura, value: temperatura, type: 'Temperatura' })
+  }
+
+  if (intensidade === 'neutro') {
+    neutroFields.push('Intensidade')
+  } else {
+    nonneutroFields.push({ label: intensidade, value: intensidade, type: 'Intensidade' })
+  }
+
+  if (profundidade === 'neutro') {
+    neutroFields.push('Profundidade')
+  } else {
+    nonneutroFields.push({ label: profundidade, value: profundidade, type: 'Profundidade' })
+  }
+
+  // Explain the current state
+  suggestions.push('**Parâmetros Atuais:**')
+  suggestions.push(
+    `Temperatura: **${temperatura === 'neutro' ? 'neutro (canceladas)' : temperatura}**`
+  )
+  suggestions.push(
+    `Intensidade: **${intensidade === 'neutro' ? 'neutro (canceladas)' : intensidade}**`
+  )
+  suggestions.push(
+    `Profundidade: **${profundidade === 'neutro' ? 'neutro (canceladas)' : profundidade}**`
+  )
+  suggestions.push('')
+
+  // Generate suggestions
+  if (neutroFields.length === 1) {
+    const neutroField = neutroFields[0]
+    suggestions.push(`❌ **${neutroField}** está neutra (suas seleções se cancelam)`)
+    suggestions.push('')
+    suggestions.push(
+      `Para corrigir, você precisa mudar **${neutroField}** para um dos lados:`
+    )
+
+    if (neutroField === 'Temperatura') {
+      suggestions.push('  • Selecione mais máscaras **Quentes** para obter Quente')
+      suggestions.push('  • Ou selecione mais máscaras **Frios** para obter Frio')
+    } else if (neutroField === 'Intensidade') {
+      suggestions.push('  • Selecione mais máscaras **Brilhantes** para obter Brilhante')
+      suggestions.push('  • Ou selecione mais máscaras **Suaves** para obter Suave')
+    } else {
+      suggestions.push('  • Selecione mais máscaras **Claras** para obter Claro')
+      suggestions.push('  • Ou selecione mais máscaras **Escuras** para obter Escuro')
+    }
+  } else if (neutroFields.length > 1) {
+    suggestions.push(
+      `❌ Múltiplos parâmetros estão neutros: **${neutroFields.join(', ')}**`
+    )
+    suggestions.push('')
+    suggestions.push(
+      `Para corrigir, ajuste as seguintes categorias para um dos lados:`
+    )
+
+    if (neutroFields.includes('Temperatura')) {
+      suggestions.push('  • **Temperatura**: selecione mais Quentes ou Frios')
+    }
+    if (neutroFields.includes('Intensidade')) {
+      suggestions.push('  • **Intensidade**: selecione mais Brilhantes ou Suaves')
+    }
+    if (neutroFields.includes('Profundidade')) {
+      suggestions.push('  • **Profundidade**: selecione mais Claras ou Escuras')
+    }
+  }
+
+  return suggestions
+}
+
 function generateSuggestions(
   temperatura: string,
   intensidade: string,
   profundidade: string
 ): string[] {
-  // Valid combinations and their requirements (using actual Portuguese forms: fria, not frio)
+  // Valid combinations and their requirements (using actual Portuguese forms: frio, not frio)
   const validCombinations = [
     { season: 'Primavera', temp: 'quente', tempLabel: 'Quente', intens: 'brilhante', intensLabel: 'Brilhante', prof: 'claro', profLabel: 'Claro' },
     { season: 'Outono', temp: 'quente', tempLabel: 'Quente', intens: 'suave', intensLabel: 'Suave', prof: 'escuro', profLabel: 'Escuro' },
-    { season: 'Verão', temp: 'fria', tempLabel: 'Fria', intens: 'suave', intensLabel: 'Suave', prof: 'claro', profLabel: 'Claro' },
-    { season: 'Inverno', temp: 'fria', tempLabel: 'Fria', intens: 'brilhante', intensLabel: 'Brilhante', prof: 'escuro', profLabel: 'Escuro' },
+    { season: 'Verão', temp: 'frio', tempLabel: 'Frio', intens: 'suave', intensLabel: 'Suave', prof: 'claro', profLabel: 'Claro' },
+    { season: 'Inverno', temp: 'frio', tempLabel: 'Frio', intens: 'brilhante', intensLabel: 'Brilhante', prof: 'escuro', profLabel: 'Escuro' },
   ]
 
   // Calculate how many changes needed for each season
@@ -227,8 +324,8 @@ export function detectSeasonFromSliders(
   const SEASON_COMBINATIONS = [
     { season: 'Primavera', temp: 'quente', intens: 'brilhante', prof: 'claro' },
     { season: 'Outono', temp: 'quente', intens: 'suave', prof: 'escuro' },
-    { season: 'Verão', temp: 'fria', intens: 'suave', prof: 'claro' },
-    { season: 'Inverno', temp: 'fria', intens: 'brilhante', prof: 'escuro' },
+    { season: 'Verão', temp: 'frio', intens: 'suave', prof: 'claro' },
+    { season: 'Inverno', temp: 'frio', intens: 'brilhante', prof: 'escuro' },
   ]
 
   // Calculate distances from center (50) for each attribute
@@ -244,7 +341,7 @@ export function detectSeasonFromSliders(
 
   // Build a map to find matching season combinations
   const attributeMap: { [key: string]: { left: string; right: string } } = {
-    temperatura: { left: 'fria', right: 'quente' },
+    temperatura: { left: 'frio', right: 'quente' },
     intensidade: { left: 'suave', right: 'brilhante' },
     profundidade: { left: 'escuro', right: 'claro' },
   }

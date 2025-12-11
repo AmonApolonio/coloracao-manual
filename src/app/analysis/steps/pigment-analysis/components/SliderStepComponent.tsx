@@ -4,7 +4,7 @@ import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { Slider, Tag, Typography } from 'antd'
 import { PigmentTemperatureDataUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl, getColorProperties, getHclFromHex, hclToHex, getHsvFromHex, hsvToHex } from '../../shared/colorConversion'
-import { COLOR_FIELDS, getLabelColor, DEFAULT_RANGES, ColorFieldKey } from '../../shared/PigmentAnalysisUtils'
+import { COLOR_FIELDS, getLabelColor, DEFAULT_RANGES, ColorFieldKey, getTemperaturaCalculationDetails, getIntensidadeCalculationDetails } from '../../shared/PigmentAnalysisUtils'
 import { ColorScaleWithMarker } from './ColorScaleWithMarker'
 
 const { Text } = Typography
@@ -103,42 +103,14 @@ const ColorPropertiesWithRange = ({
   if (stepKey === 'temperatura') {
     // Generate hue scale within the custom range using HSV
     const hueColors = generateHueScaleInRange(hsv.s, hsv.v, hueStart, hueEnd, 36)
+    const calculationDetails = getTemperaturaCalculationDetails(hex, fieldKey)
     
-    // Calculate marker position within the range, remapped to 0-100 using HSV hue
-    let huePosition: number
-    if (hueStart <= hueEnd) {
-      // Normal range (e.g., 20 to 90)
-      if (hsv.h < hueStart) {
-        huePosition = 0
-      } else if (hsv.h > hueEnd) {
-        huePosition = 100
-      } else {
-        huePosition = ((hsv.h - hueStart) / (hueEnd - hueStart)) * 100
-      }
-    } else {
-      // Wrap-around range (e.g., 90 to 89 goes through 360/0)
-      const range = (360 - hueStart) + hueEnd
-      let adjustedHue: number
-      if (hsv.h >= hueStart) {
-        adjustedHue = hsv.h - hueStart
-      } else if (hsv.h <= hueEnd) {
-        adjustedHue = (360 - hueStart) + hsv.h
-      } else {
-        // Outside the wrap-around range - determine which extreme is closer
-        const distToStart = hsv.h - hueEnd
-        const distToEnd = hueStart - hsv.h
-        adjustedHue = distToStart < distToEnd ? range : 0
-      }
-      huePosition = Math.max(0, Math.min(100, (adjustedHue / range) * 100))
-    }
-
     return (
       <ColorScaleWithMarker
         colors={hueColors}
-        markerPosition={huePosition}
+        markerPosition={calculationDetails.finalValue}
         label="Escala de Matiz"
         actualValue={`${Math.round(hsv.h)}°`}
-        displayValue={Math.round(huePosition)}
         rangeStart={hueStart}
         rangeEnd={hueEnd}
         onRangeStartChange={setHueStart}
@@ -147,6 +119,7 @@ const ColorPropertiesWithRange = ({
         isReadOnly={isReadOnly}
         rangesLocked={rangesLocked}
         isAdmin={isAdmin}
+        calculationDetails={calculationDetails}
       />
     )
   } else if (stepKey === 'intensidade') {
@@ -163,13 +136,14 @@ const ColorPropertiesWithRange = ({
       chromaPosition = ((hcl.c - chromaStart) / (chromaEnd - chromaStart)) * 100
     }
 
+    const calculationDetails = getIntensidadeCalculationDetails(hex, fieldKey)
+
     return (
       <ColorScaleWithMarker
         colors={chromaColors}
         markerPosition={chromaPosition}
         label="Escala de Croma"
         actualValue={`C: ${Math.round(hcl.c)}`}
-        displayValue={Math.round(chromaPosition)}
         rangeStart={chromaStart}
         rangeEnd={chromaEnd}
         onRangeStartChange={setChromaStart}
@@ -178,6 +152,7 @@ const ColorPropertiesWithRange = ({
         isReadOnly={isReadOnly}
         rangesLocked={rangesLocked}
         isAdmin={isAdmin}
+        calculationDetails={calculationDetails}
       />
     )
   } else if (stepKey === 'profundidade') {

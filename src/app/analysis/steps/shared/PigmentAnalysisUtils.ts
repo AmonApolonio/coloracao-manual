@@ -1,5 +1,8 @@
 import { ColorField } from '@/lib/types'
-import { getHclFromHex, getHsvFromHex, getColorProperties } from './colorConversion'
+import { getHclFromHex, getHsvFromHex } from './colorConversion'
+import {
+  PROFUNDIDADE_RANGES,
+} from './profundidadeUtils'
 
 export const COLOR_FIELDS: { value: ColorField; label: string }[] = [
   { value: 'iris', label: 'Iris' },
@@ -57,14 +60,6 @@ export const INTENSIDADE_RANGES = [
   { min: 87.5, max: 100, label: 'Extremo Brilhante', color: '#dc2626' },
 ]
 
-export const PROFUNDIDADE_RANGES = [
-  { min: 0, max: 12.5, label: 'Extremo Escuro', color: '#8b5cf6' },
-  { min: 12.5, max: 47, label: 'Neutro Escuro', color: '#3b82f6' },
-  { min: 47, max: 53, label: 'Neutro Puro', color: '#33d221' },
-  { min: 53, max: 87.5, label: 'Neutro Claro', color: '#f97316' },
-  { min: 87.5, max: 100, label: 'Extremo Claro', color: '#dc2626' },
-]
-
 export const ANALYSIS_STEPS = [
   { title: 'Temperatura', key: 'temperatura' },
   { title: 'Intensidade', key: 'intensidade' },
@@ -72,6 +67,40 @@ export const ANALYSIS_STEPS = [
   { title: 'Geral', key: 'geral' },
 ]
 
+/**
+ * Get weight for a value based on temperature/intensity ranges
+ * Valores entre 0 - 12,5 -> Peso 4
+ * Valores entre 12,5 - 47 -> Peso 2
+ * Valores entre 47 - 53 -> Peso 1
+ * Valores entre 54 - 87,5 -> Peso 2
+ * Valores entre 87,5 - 100 -> Peso 4
+ */
+export const getWeightForValue = (value: number): number => {
+  if (value >= 0 && value <= 12.5) return 4
+  if (value > 12.5 && value < 47) return 2
+  if (value >= 47 && value <= 53) return 1
+  if (value > 53 && value < 87.5) return 2
+  if (value >= 87.5 && value <= 100) return 4
+  return 1
+}
+
+/**
+ * Calculate weighted average from an array of values
+ * Uses getWeightForValue to determine weights
+ */
+export const calculateWeightedAverage = (values: number[]): number | null => {
+  if (values.length === 0) return null
+
+  const valuesWithWeights = values.map((value) => ({
+    value,
+    weight: getWeightForValue(value),
+  }))
+
+  const totalWeight = valuesWithWeights.reduce((sum, vw) => sum + vw.weight, 0)
+  const weightedSum = valuesWithWeights.reduce((sum, vw) => sum + vw.value * vw.weight, 0)
+
+  return Math.round(weightedSum / totalWeight)
+}
 
 export const getLabelCategory = (
   value: number | null,
@@ -118,7 +147,20 @@ export const getLabelColor = (
 }
 
 /**
+ * Apply saturation-based adjustment to reduce temperature for desaturated colors
+ * Lower saturation (less pigment) means colder appearance
+ * When saturation <= 30, reduces the temperatura value towards colder (lower values)
+ */
+const applySaturationInfluence = (baseTemperatura: number, saturation: number): number => {
+  const maxReduction = 40
+  const ratioS = saturation <= 30 ? (30 - saturation) / 30 : 0
+  const reduction = ratioS * maxReduction
+  return Math.max(0, baseTemperatura - reduction)
+}
+
+/**
  * Calculate the temperatura (hue) position for a color within the default range
+ * Uses HSV hue and applies saturation influence
  * Returns a value 0-100 representing position in the hue scale
  */
 export const calculateTemperaturaPosition = (hex: string, fieldKey: string): number => {
@@ -139,7 +181,7 @@ export const calculateTemperaturaPosition = (hex: string, fieldKey: string): num
       huePosition = ((hsv.h - hueStart) / (hueEnd - hueStart)) * 100
     }
   } else {
-    // Wrap-around range (e.g., 300 to 100 goes through 360/0)
+    // Wrap-around range (e.g., 350 to 50 goes through 360/0)
     const range = (360 - hueStart) + hueEnd
     let adjustedHue: number
     if (hsv.h >= hueStart) {
@@ -155,7 +197,125 @@ export const calculateTemperaturaPosition = (hex: string, fieldKey: string): num
     huePosition = Math.max(0, Math.min(100, (adjustedHue / range) * 100))
   }
 
-  return Math.round(huePosition)
+  // Apply saturation influence: lower saturation shifts temperature towards colder (lower values)
+  const adjustedTemperatura = applySaturationInfluence(huePosition, hsv.s)
+  
+  return Math.round(adjustedTemperatura)
+}
+
+/**
+ * Get detailed calculation breakdown for temperatura positioning
+ * Returns all intermediate values used in the calculation for display/debugging
+ */
+export interface TemperaturaCalculationDetails {
+  actualHue: number
+  hueStart: number
+  hueEnd: number
+  remappedValue: number
+  saturation: number
+  saturationAdjustment: number
+  finalValue: number
+}
+
+/**
+ * Get detailed calculation breakdown for intensidade positioning
+ * Returns all intermediate values used in the calculation for display/debugging
+ */
+export interface IntensidadeCalculationDetails {
+  actualChroma: number
+  chromaStart: number
+  chromaEnd: number
+  remappedValue: number
+  finalValue: number
+}
+
+export const getTemperaturaCalculationDetails = (
+  hex: string,
+  fieldKey: string
+): TemperaturaCalculationDetails => {
+  const hsv = getHsvFromHex(hex)
+  const colorField = fieldKey as ColorFieldKey
+  const hueDefaults = DEFAULT_RANGES.hue[colorField] || { zero: 0, hundred: 360 }
+  const hueStart = hueDefaults.zero
+  const hueEnd = hueDefaults.hundred
+
+  let huePosition: number
+  if (hueStart <= hueEnd) {
+    // Normal range (e.g., 20 to 90)
+    if (hsv.h < hueStart) {
+      huePosition = 0
+    } else if (hsv.h > hueEnd) {
+      huePosition = 100
+    } else {
+      huePosition = ((hsv.h - hueStart) / (hueEnd - hueStart)) * 100
+    }
+  } else {
+    // Wrap-around range (e.g., 350 to 50 goes through 360/0)
+    const range = (360 - hueStart) + hueEnd
+    let adjustedHue: number
+    if (hsv.h >= hueStart) {
+      adjustedHue = hsv.h - hueStart
+    } else if (hsv.h <= hueEnd) {
+      adjustedHue = (360 - hueStart) + hsv.h
+    } else {
+      // Outside the wrap-around range - determine which extreme is closer
+      const distToStart = hsv.h - hueEnd
+      const distToEnd = hueStart - hsv.h
+      adjustedHue = distToStart < distToEnd ? range : 0
+    }
+    huePosition = Math.max(0, Math.min(100, (adjustedHue / range) * 100))
+  }
+
+  // Calculate saturation adjustment
+  const maxReduction = 40
+  const ratioS = hsv.s <= 30 ? (30 - hsv.s) / 30 : 0
+  const saturationAdjustment = ratioS * maxReduction
+  const adjustedTemperatura = Math.max(0, huePosition - saturationAdjustment)
+  const finalValue = Math.round(adjustedTemperatura)
+
+  return {
+    actualHue: Math.round(hsv.h * 10) / 10,
+    hueStart,
+    hueEnd,
+    remappedValue: Math.round(huePosition * 10) / 10,
+    saturation: Math.round(hsv.s * 10) / 10,
+    saturationAdjustment: Math.round(saturationAdjustment * 10) / 10,
+    finalValue,
+  }
+}
+
+/**
+ * Get detailed calculation breakdown for intensidade positioning
+ * Returns all intermediate values used in the calculation for display/debugging
+ */
+export const getIntensidadeCalculationDetails = (
+  hex: string,
+  fieldKey: string
+): IntensidadeCalculationDetails => {
+  const hcl = getHclFromHex(hex)
+  const colorField = fieldKey as ColorFieldKey
+  const chromaDefaults = DEFAULT_RANGES.chroma[colorField] || { min: 0, max: 60 }
+  const chromaStart = chromaDefaults.min
+  const chromaEnd = chromaDefaults.max
+
+  let chromaPosition: number
+  if (hcl.c < chromaStart) {
+    chromaPosition = 0
+  } else if (hcl.c > chromaEnd) {
+    chromaPosition = 100
+  } else {
+    chromaPosition = ((hcl.c - chromaStart) / (chromaEnd - chromaStart)) * 100
+  }
+
+  const finalValue = Math.round(chromaPosition)
+
+  return {
+    actualChroma: Math.round(hcl.c * 10) / 10,
+    chromaStart,
+    chromaEnd,
+    remappedValue: Math.round(chromaPosition * 10) / 10,
+    finalValue,
+  }
 }
 
 /**
@@ -181,23 +341,4 @@ export const calculateIntensidadePosition = (hex: string, fieldKey: string): num
   return Math.round(chromaPosition)
 }
 
-/**
- * Calculate the profundidade (lightness) position based on average lightness of all colors
- * Returns a value 0-100 representing position in the lightness scale (0 = dark, 100 = light)
- */
-export const calculateProfundidadePosition = (
-  extractedColors: { [key: string]: string }
-): number => {
-  const fields = Object.keys(extractedColors)
-  if (fields.length === 0) return 50
 
-  // Calculate average lightness across all colors
-  const properties = fields.map((field) => getColorProperties(extractedColors[field]))
-  const lightnessValues = properties.map((p) => p.lightness)
-  const avgLightness = Math.round(lightnessValues.reduce((sum, l) => sum + l, 0) / properties.length)
-
-  // Map average lightness (0-100) directly to the slider position
-  // Lower lightness = darker = lower value (Extremo Escuro)
-  // Higher lightness = lighter = higher value (Extremo Claro)
-  return avgLightness
-}

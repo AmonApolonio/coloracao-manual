@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
+import { useAuth } from '@/app/context/AuthContext'
 import {
   updateAnalysisColorExtraction,
   updateAnalysisMaskData,
@@ -69,6 +70,7 @@ export function useAnalysisSave({
 }: UseAnalysisSaveProps): UseAnalysisSaveReturn {
   const router = useRouter()
   const { message } = AntdApp.useApp()
+  const { isAdmin } = useAuth()
   const [saving, setSaving] = useState(false)
 
   // Helper to check if save operations are allowed
@@ -87,7 +89,7 @@ export function useAnalysisSave({
     try {
       setSaving(true)
 
-      await updateAnalysisColorExtraction(analysis.id, svgVectorData, currentStep)
+      await updateAnalysisColorExtraction(analysis.id, svgVectorData, currentStep, isAdmin)
 
       setAnalysis({
         ...analysis,
@@ -119,16 +121,16 @@ export function useAnalysisSave({
 
       // Save mask analysis data if we're in mask analysis step (1)
       if (currentStep === 1 && maskAnalysisData) {
-        await updateAnalysisMaskData(analysis.id, maskAnalysisData, currentStep)
+        await updateAnalysisMaskData(analysis.id, maskAnalysisData, currentStep, isAdmin)
       }
       // Save pigment analysis data if we're in pigment steps (2-5)
       else if (currentStep >= 2 && currentStep <= 5 && pigmentAnalysisData) {
         const mergedData = mergePigmentAnalysisData(analysis, currentStep - 1, pigmentAnalysisData)
-        await updateAnalysisPigmentData(analysis.id, mergedData, currentStep)
+        await updateAnalysisPigmentData(analysis.id, mergedData, currentStep, isAdmin)
       }
       // Save color_season if we're in final classification step (6)
       else if (currentStep === 6 && colorSeason) {
-        await updateAnalysisColorSeason(analysis.id, colorSeason)
+        await updateAnalysisColorSeason(analysis.id, colorSeason, isAdmin)
       }
 
       setAnalysis({
@@ -181,7 +183,7 @@ export function useAnalysisSave({
         updateData.analise_pigmentos = mergedData
       }
 
-      await saveAnalysisProgress(analysis.id, currentStep, updateData)
+      await saveAnalysisProgress(analysis.id, currentStep, updateData, isAdmin)
 
     } catch (error) {
       console.error('Error saving:', error)
@@ -199,7 +201,7 @@ export function useAnalysisSave({
     try {
       setSaving(true)
 
-      await completeAnalysis(analysis.id, finalColorSeason)
+      await completeAnalysis(analysis.id, finalColorSeason, isAdmin)
 
       message.success('Análise concluída com sucesso!')
       setTimeout(() => router.push('/'), 1500)

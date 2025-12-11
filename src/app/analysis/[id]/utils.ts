@@ -158,7 +158,7 @@ export const isPigmentStepComplete = (
  * Get list of missing mask analysis rows
  */
 export const getMissingMaskRows = (maskData: MaskAnalysisDataDB | null): string[] => {
-  if (!maskData) {
+  if (!maskData || !maskData.selectedMasks || maskData.selectedMasks.length === 0) {
     return [
       'Temperatura',
       'Subtom',
@@ -170,10 +170,10 @@ export const getMissingMaskRows = (maskData: MaskAnalysisDataDB | null): string[
 
   const missing: string[] = []
 
-  if (!maskData.temperatura) missing.push('Temperatura')
+  if (!maskData.temperatura || maskData.temperatura === 'neutro') missing.push('Temperatura')
   if (!maskData.subtom) missing.push('Subtom')
-  if (!maskData.intensidade) missing.push('Intensidade')
-  if (!maskData.profundidade) missing.push('Profundidade')
+  if (!maskData.intensidade || maskData.intensidade === 'neutro') missing.push('Intensidade')
+  if (!maskData.profundidade || maskData.profundidade === 'neutro') missing.push('Profundidade')
   if (!maskData.colorSeason) missing.push('Estação de Cores')
 
   return missing
@@ -183,11 +183,14 @@ export const getMissingMaskRows = (maskData: MaskAnalysisDataDB | null): string[
  * Check if mask analysis step is complete
  */
 export const isMaskStepComplete = (maskData: MaskAnalysisDataDB | null): boolean => {
-  if (!maskData) return false
+  if (!maskData || !maskData.selectedMasks || maskData.selectedMasks.length === 0) return false
   return !!(
     maskData.temperatura &&
+    maskData.temperatura !== 'neutro' &&
     maskData.intensidade &&
+    maskData.intensidade !== 'neutro' &&
     maskData.profundidade &&
+    maskData.profundidade !== 'neutro' &&
     maskData.subtom &&
     maskData.colorSeason
   )

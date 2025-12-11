@@ -24,11 +24,19 @@ export {
   COLOR_FIELDS,
   TEMPERATURE_RANGES,
   INTENSIDADE_RANGES,
-  PROFUNDIDADE_RANGES,
   ANALYSIS_STEPS,
   getLabelCategory,
   getLabelColor,
 } from './PigmentAnalysisUtils'
+
+// Profundidade utilities
+export {
+  PROFUNDIDADE_RANGES,
+  CONTRAST_RANGES,
+  getProfundidadeExtremosData,
+  calculateProfundidadeFromContrast,
+  getProfundidadeCalculationDetails,
+} from './profundidadeUtils'
 
 // Season detection utilities
 export {

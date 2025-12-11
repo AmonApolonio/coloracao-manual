@@ -147,7 +147,7 @@ export const FinalClassificationStep = ({
               <div className="p-3 bg-gray-50 rounded-lg border border-gray-300 space-y-2">
                 <div className="flex gap-1 flex-wrap">
                   <Tag color="blue" className="text-xs">
-                    {maskAnalysisData.temperatura === 'quente' ? '🔥 Quente' : '❄️ Fria'}
+                    {maskAnalysisData.temperatura === 'quente' ? '🔥 Quente' : '❄️ Frio'}
                   </Tag>
                   <Tag color="blue" className="text-xs">
                     {maskAnalysisData.intensidade === 'brilhante' ? '✨ Brilhante' : '🌙 Suave'}

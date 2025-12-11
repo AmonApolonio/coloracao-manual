@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Modal, Checkbox, Row, Col, Divider, Typography, Slider } from 'antd'
+import { Modal, Checkbox, Typography, Slider } from 'antd'
 import { PigmentTemperatureDataUI } from '@/lib/types-ui'
+import { calculateWeightedAverage, getWeightForValue } from '../../shared/PigmentAnalysisUtils'
 
 const { Text } = Typography
 
@@ -43,10 +44,7 @@ export const AverageCalculatorDialog = ({
       .filter((item) => item.isSelected && item.value !== null)
       .map((item) => item.value as number)
 
-    const average =
-      selectedValues.length > 0
-        ? Math.round(selectedValues.reduce((a, b) => a + b, 0) / selectedValues.length)
-        : null
+    const average = selectedValues.length > 0 ? calculateWeightedAverage(selectedValues) : null
 
     return { filteredAverage: average, items: processedItems }
   }, [stepData, selectedItems])
@@ -100,81 +98,105 @@ export const AverageCalculatorDialog = ({
 
         {/* Individual Items */}
         <div className="space-y-2 overflow-y-auto flex-1">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className={`p-3 rounded-lg border-2 transition-all ${item.isSelected
-                  ? 'bg-gray-50 border-[#947B62]'
-                  : 'bg-gray-50 border-gray-200'
-                }`}
-              style={item.isSelected ? { backgroundColor: '#F5F0EA', borderColor: '#947B62' } : undefined}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Checkbox
-                  checked={item.isSelected}
-                  onChange={() => handleToggleItem(item.id)}
-                />
-                <Text className="text-sm flex-1">{item.name}</Text>
-                {item.value !== null && (
-                  <Text code className="text-xs font-semibold">
-                    {item.value}
-                  </Text>
-                )}
-              </div>
+          {items.map((item) => {
+            const weight = item.value !== null ? getWeightForValue(item.value) : null
+            return (
+              <div
+                key={item.id}
+                className={`p-3 rounded-lg border-2 transition-all ${item.isSelected
+                    ? 'bg-gray-50 border-[#947B62]'
+                    : 'bg-gray-50 border-gray-200'
+                  }`}
+                style={item.isSelected ? { backgroundColor: '#F5F0EA', borderColor: '#947B62' } : undefined}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Checkbox
+                    checked={item.isSelected}
+                    onChange={() => handleToggleItem(item.id)}
+                  />
+                  <Text className="text-sm flex-1">{item.name}</Text>
+                  {item.value !== null && (
+                    <div className="flex items-center gap-2">
+                      <Text code className="text-xs font-semibold">
+                        {item.value}
+                      </Text>
+                      <Text className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#E8D7C3', color: '#5D4E37' }}>
+                        peso {weight}
+                      </Text>
+                    </div>
+                  )}
+                </div>
 
-              {item.value !== null && (
-                <div className="pl-6 pr-1">
-                  <div className="relative">
-                    <Slider
-                      className={`average-calc-slider-${item.id}`}
-                      value={item.value}
-                      min={0}
-                      max={100}
-                      disabled
-                      marks={{
-                        0: '0',
-                        12.5: '12.5',
-                        47: '47',
-                        53: '53',
-                        87.5: '87.5',
-                        100: '100',
-                      }}
-                      tooltip={{
-                        open: false,
-                      }}
-                    />
-                    {/* Highlighted dot marker */}
-                    <div
-                      className="absolute top-0 h-full pointer-events-none flex items-center"
-                      style={{
-                        left: `calc(${((item.value - 0) / (100 - 0)) * 100}% - 8px)`,
-                      }}
-                    >
-                      <div
-                        className="w-4 h-4 rounded-full border-2 border-red-500 bg-red-300 shadow-md"
-                        title={`Valor: ${item.value}`}
+                {item.value !== null && (
+                  <div className="pl-6 pr-1">
+                    <div className="relative">
+                      <Slider
+                        className={`average-calc-slider-${item.id}`}
+                        value={item.value}
+                        min={0}
+                        max={100}
+                        disabled
+                        marks={{
+                          0: '0',
+                          12.5: '12.5',
+                          47: '47',
+                          53: '53',
+                          87.5: '87.5',
+                          100: '100',
+                        }}
+                        tooltip={{
+                          open: false,
+                        }}
                       />
+                      {/* Highlighted dot marker */}
+                      <div
+                        className="absolute top-0 h-full pointer-events-none flex items-center"
+                        style={{
+                          left: `calc(${((item.value - 0) / (100 - 0)) * 100}% - 8px)`,
+                        }}
+                      >
+                        <div
+                          className="w-4 h-4 rounded-full border-2 border-red-500 bg-red-300 shadow-md"
+                          title={`Valor: ${item.value}`}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            )
+          })}
         </div>
 
-        {/* Average Comparison - Single Row */}
-        <div className="bg-gray-50 p-3 rounded-lg flex justify-between items-center gap-4 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Text className="text-sm">Média Original:</Text>
-            <Text code className="font-semibold">
-              {currentAverage}
-            </Text>
+        {/* Average Comparison - Single Row with Weighted Average Details */}
+        <div className="bg-gray-50 p-3 rounded-lg space-y-3 flex-shrink-0">
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Text className="text-sm">Média Original (Ponderada):</Text>
+              <Text code className="font-semibold">
+                {currentAverage}
+              </Text>
+            </div>
+            <div className="flex items-center gap-2">
+              <Text className="text-sm">Média Filtrada (Ponderada):</Text>
+              <Text code className="font-semibold">
+                {filteredAverage}
+              </Text>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Text className="text-sm">Média Filtrada:</Text>
-            <Text code className="font-semibold">
-              {filteredAverage}
+          
+          {/* Weight legend */}
+          <div className="border-t border-gray-300 pt-2">
+            <Text type="secondary" className="text-xs block mb-2">
+              <span className="font-semibold">Tabela de Pesos:</span>
             </Text>
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+              <div>• 0 - 12,5: <span className="font-semibold">Peso 4</span></div>
+              <div>• 12,5 - 47: <span className="font-semibold">Peso 2</span></div>
+              <div>• 47 - 53: <span className="font-semibold">Peso 1</span></div>
+              <div>• 54 - 87,5: <span className="font-semibold">Peso 2</span></div>
+              <div className="col-span-2">• 87,5 - 100: <span className="font-semibold">Peso 4</span></div>
+            </div>
           </div>
         </div>
       </div>

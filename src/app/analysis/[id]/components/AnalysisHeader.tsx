@@ -4,7 +4,7 @@ import { RefObject, useState, useEffect } from 'react'
 import { Badge, Button, Space, Steps, Tooltip, Modal } from 'antd'
 import { ArrowLeftOutlined, ArrowRightOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPalette } from '@fortawesome/free-solid-svg-icons'
+import { faPalette, faFlagCheckered } from '@fortawesome/free-solid-svg-icons'
 import { useRouter } from 'next/navigation'
 import { App as AntdApp } from 'antd'
 import { User, Analysis } from '@/lib/types'
@@ -392,12 +392,12 @@ export function AnalysisHeader({
                   <Button
                     type="primary"
                     size={isScrolled ? 'small' : 'middle'}
-                    icon={<SaveOutlined />}
+                    icon={<FontAwesomeIcon icon={faFlagCheckered} />}
                     loading={saving}
                     disabled={!selectedColorSeason}
                     onClick={() => onCompleteAnalysis(selectedColorSeason)}
                   >
-                    {isScrolled ? '' : 'Concluir'}
+                    {isScrolled ? 'Concluir' : 'Concluir'}
                   </Button>
                 </Tooltip>
               ) : (

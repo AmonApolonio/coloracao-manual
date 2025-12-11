@@ -34,7 +34,7 @@ async function getSupabaseClient(): Promise<SupabaseClient> {
 /**
  * Fetch all users and analyses, organize by status
  */
-export async function loadAllUsersAndAnalyses() {
+export async function loadAllUsersAndAnalyses(isAdmin: boolean = false) {
   const client = await getSupabaseClient()
   // Fetch all users
   const { data: allUsers, error: errorAll } = await client
@@ -44,9 +44,10 @@ export async function loadAllUsersAndAnalyses() {
 
   if (errorAll) throw errorAll
 
-  // Fetch all analyses
+  // Fetch all analyses from appropriate table
+  const tableName = getAnalysisTable(isAdmin)
   const { data: analyses, error: errorAnalyses } = await client
-    .from('analyses')
+    .from(tableName)
     .select('*')
     .order('created_at', { ascending: false })
 
@@ -59,11 +60,13 @@ export async function loadAllUsersAndAnalyses() {
  * Get or create analysis for a user
  * Priority: existing in_process -> not_started -> create new
  */
-export async function getOrCreateAnalysisForUser(userId: string): Promise<string> {
+export async function getOrCreateAnalysisForUser(userId: string, isAdmin: boolean = false): Promise<string> {
   const client = await getSupabaseClient()
+  const tableName = getAnalysisTable(isAdmin)
+  
   // Check if user has any in-progress analysis
   const { data: existingAnalyses, error: checkError } = await client
-    .from('analyses')
+    .from(tableName)
     .select('id, status')
     .eq('user_id', userId)
     .eq('status', 'in_process')
@@ -78,7 +81,7 @@ export async function getOrCreateAnalysisForUser(userId: string): Promise<string
 
   // Check if there's a not_started analysis
   const { data: notStartedAnalyses, error: notStartedError } = await client
-    .from('analyses')
+    .from(tableName)
     .select('id')
     .eq('user_id', userId)
     .eq('status', 'not_started')
@@ -93,7 +96,7 @@ export async function getOrCreateAnalysisForUser(userId: string): Promise<string
 
   // Create new analysis
   const { data: newAnalysis, error: insertError } = await client
-    .from('analyses')
+    .from(tableName)
     .insert({
       user_id: userId,
       status: 'not_started',
@@ -112,10 +115,11 @@ export async function getOrCreateAnalysisForUser(userId: string): Promise<string
 /**
  * Create a new analysis for a user
  */
-export async function createNewAnalysis(userId: string): Promise<Analysis> {
+export async function createNewAnalysis(userId: string, isAdmin: boolean = false): Promise<Analysis> {
   const client = await getSupabaseClient()
+  const tableName = getAnalysisTable(isAdmin)
   const { data: newAnalysis, error: insertError } = await client
-    .from('analyses')
+    .from(tableName)
     .insert({
       user_id: userId,
       status: 'not_started',
@@ -136,10 +140,11 @@ export async function createNewAnalysis(userId: string): Promise<Analysis> {
 /**
  * Fetch a single analysis by ID
  */
-export async function fetchAnalysisById(analysisId: string): Promise<Analysis | null> {
+export async function fetchAnalysisById(analysisId: string, isAdmin: boolean = false): Promise<Analysis | null> {
   const client = await getSupabaseClient()
+  const tableName = getAnalysisTable(isAdmin)
   const { data, error } = await client
-    .from('analyses')
+    .from(tableName)
     .select('*')
     .eq('id', analysisId)
     .maybeSingle()
@@ -166,12 +171,20 @@ export async function fetchUserById(userId: string): Promise<User | null> {
 // ========== ANALYSIS UPDATE FUNCTIONS ==========
 
 /**
+ * Helper function to get the appropriate table name based on admin status
+ */
+function getAnalysisTable(isAdmin: boolean): string {
+  return isAdmin ? 'analyses_admin' : 'analyses'
+}
+
+/**
  * Update analysis with color extraction data
  */
 export async function updateAnalysisColorExtraction(
   analysisId: string,
   svgVectorData: any,
-  currentStep: number
+  currentStep: number,
+  isAdmin: boolean = false
 ): Promise<void> {
   const client = await getSupabaseClient()
   const updatePayload: any = {
@@ -181,8 +194,9 @@ export async function updateAnalysisColorExtraction(
     extracao: svgVectorData,
   }
 
+  const tableName = getAnalysisTable(isAdmin)
   const { error } = await client
-    .from('analyses')
+    .from(tableName)
     .update(updatePayload)
     .eq('id', analysisId)
 
@@ -195,7 +209,8 @@ export async function updateAnalysisColorExtraction(
 export async function updateAnalysisMaskData(
   analysisId: string,
   maskAnalysisData: MaskAnalysisDataDB,
-  currentStep: number
+  currentStep: number,
+  isAdmin: boolean = false
 ): Promise<void> {
   const client = await getSupabaseClient()
   const updatePayload: any = {
@@ -205,8 +220,9 @@ export async function updateAnalysisMaskData(
     analise_mascaras: maskAnalysisData,
   }
 
+  const tableName = getAnalysisTable(isAdmin)
   const { error } = await client
-    .from('analyses')
+    .from(tableName)
     .update(updatePayload)
     .eq('id', analysisId)
 
@@ -219,7 +235,8 @@ export async function updateAnalysisMaskData(
 export async function updateAnalysisPigmentData(
   analysisId: string,
   pigmentAnalysisData: PigmentAnalysisDataDB,
-  currentStep: number
+  currentStep: number,
+  isAdmin: boolean = false
 ): Promise<void> {
   const client = await getSupabaseClient()
   const updatePayload: any = {
@@ -229,8 +246,9 @@ export async function updateAnalysisPigmentData(
     analise_pigmentos: pigmentAnalysisData,
   }
 
+  const tableName = getAnalysisTable(isAdmin)
   const { error } = await client
-    .from('analyses')
+    .from(tableName)
     .update(updatePayload)
     .eq('id', analysisId)
 
@@ -242,7 +260,8 @@ export async function updateAnalysisPigmentData(
  */
 export async function updateAnalysisColorSeason(
   analysisId: string,
-  colorSeason: ColorSeason
+  colorSeason: ColorSeason,
+  isAdmin: boolean = false
 ): Promise<void> {
   const client = await getSupabaseClient()
   const updatePayload: any = {
@@ -250,8 +269,9 @@ export async function updateAnalysisColorSeason(
     updated_at: new Date().toISOString(),
   }
 
+  const tableName = getAnalysisTable(isAdmin)
   const { error } = await client
-    .from('analyses')
+    .from(tableName)
     .update(updatePayload)
     .eq('id', analysisId)
 
@@ -264,7 +284,8 @@ export async function updateAnalysisColorSeason(
 export async function saveAnalysisProgress(
   analysisId: string,
   currentStep: number,
-  updateData: any
+  updateData: any,
+  isAdmin: boolean = false
 ): Promise<void> {
   const client = await getSupabaseClient()
   const updatePayload: any = {
@@ -274,8 +295,9 @@ export async function saveAnalysisProgress(
     ...updateData,
   }
 
+  const tableName = getAnalysisTable(isAdmin)
   const { error } = await client
-    .from('analyses')
+    .from(tableName)
     .update(updatePayload)
     .eq('id', analysisId)
 
@@ -287,7 +309,8 @@ export async function saveAnalysisProgress(
  */
 export async function completeAnalysis(
   analysisId: string,
-  colorSeason?: ColorSeason | null
+  colorSeason?: ColorSeason | null,
+  isAdmin: boolean = false
 ): Promise<void> {
   const client = await getSupabaseClient()
   const updatePayload: any = {
@@ -301,8 +324,9 @@ export async function completeAnalysis(
     updatePayload.color_season = colorSeason
   }
 
+  const tableName = getAnalysisTable(isAdmin)
   const { error } = await client
-    .from('analyses')
+    .from(tableName)
     .update(updatePayload)
     .eq('id', analysisId)
 

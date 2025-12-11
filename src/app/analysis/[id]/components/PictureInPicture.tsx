@@ -29,6 +29,7 @@ export function PictureInPicture({ imageUrl, alt, onClose }: PictureInPicturePro
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 })
   const [isExpanded, setIsExpanded] = useState(false)
   const [preExpandState, setPreExpandState] = useState<{ position: Position; size: Size } | null>(null)
+  const [isGrayscale, setIsGrayscale] = useState(false)
 
   const MIN_WIDTH = 150
   const MIN_HEIGHT = 180
@@ -190,7 +191,18 @@ export function PictureInPicture({ imageUrl, alt, onClose }: PictureInPicturePro
           <div className="w-2 h-2 rounded-full bg-gray-300" />
           <div className="w-2 h-2 rounded-full bg-gray-300" />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsGrayscale(!isGrayscale)}
+            className={`px-2 py-1 text-xs rounded-full font-medium transition-all duration-150 ${
+              isGrayscale
+                ? 'bg-gray-700 text-white hover:bg-gray-800'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            title="Ativar/desativar escala de cinza"
+          >
+            {isGrayscale ? 'Escala Colorida' : 'Escala de Cinza'}
+          </button>
           <button
             onClick={toggleExpand}
             className="w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-black/5 transition-all duration-150"
@@ -216,6 +228,9 @@ export function PictureInPicture({ imageUrl, alt, onClose }: PictureInPicturePro
             alt={alt}
             className="w-full h-full object-cover"
             draggable={false}
+            style={{
+              filter: isGrayscale ? 'grayscale(100%)' : 'none',
+            }}
           />
         </div>
       </div>

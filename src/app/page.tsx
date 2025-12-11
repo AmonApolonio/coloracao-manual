@@ -45,7 +45,7 @@ export default function Home() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const { allUsers, analyses } = await loadAllUsersAndAnalyses()
+      const { allUsers, analyses } = await loadAllUsersAndAnalyses(isAdmin)
 
       // Group analyses by user_id
       const analysesByUser = new Map<string, any[]>()
@@ -127,7 +127,7 @@ export default function Home() {
         return
       }
 
-      const targetAnalysisId = await getOrCreateAnalysisForUser(user.id)
+      const targetAnalysisId = await getOrCreateAnalysisForUser(user.id, isAdmin)
       router.push(`/analysis/${targetAnalysisId}`)
     } catch (error) {
       console.error('Error navigating to analysis:', error)
@@ -143,13 +143,13 @@ export default function Home() {
   // Create a new analysis for a user who already has completed analyses
   const handleCreateNewAnalysis = async (user: User) => {
     try {
-      await createNewAnalysis(user.id)
+      await createNewAnalysis(user.id, isAdmin)
 
       // Refresh the list to show the new analysis
       await loadData()
       
       // Navigate to the new analysis
-      const targetAnalysisId = await getOrCreateAnalysisForUser(user.id)
+      const targetAnalysisId = await getOrCreateAnalysisForUser(user.id, isAdmin)
       router.push(`/analysis/${targetAnalysisId}`)
     } catch (error) {
       console.error('Error creating new analysis:', error)

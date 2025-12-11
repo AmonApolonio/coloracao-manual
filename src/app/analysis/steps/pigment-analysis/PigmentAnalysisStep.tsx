@@ -7,7 +7,9 @@ import { SVGVectorData } from '@/lib/types'
 import { PigmentTemperatureDataUI, ProfundidadeDataUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
 import { PigmentAnalysisDataDB } from '@/lib/types-db'
 import { convertUIToDB, convertDBToUI } from '@/lib/pigment-conversion'
-import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateTemperaturaPosition, calculateIntensidadePosition, calculateProfundidadePosition } from '../shared/PigmentAnalysisUtils'
+import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateTemperaturaPosition, calculateIntensidadePosition, calculateWeightedAverage } from '../shared/PigmentAnalysisUtils'
+import { getProfundidadeExtremosData, calculateProfundidadeFromContrast } from '../shared/profundidadeUtils'
+import { getColorProperties } from '../shared/colorConversion'
 import { SliderStepComponent } from './components/SliderStepComponent'
 import { ProfundidadeStep } from './components/ProfundidadeStep'
 import { GeralSummaryComponent } from './components/GeralSummaryComponent'
@@ -251,7 +253,38 @@ export default function PigmentAnalysisStep({
         return { ...prev, intensidade: intensidadeData }
       })
     } else if (stepKey === 'profundidade') {
+      // Auto-fill profundidade value based on color analysis
+      setAnalysisData((prev) => {
+        // Get lightness data for all colors
+        const colorLightnessData = Object.entries(extractedColors).map(([field, hex]) => {
+          const properties = getColorProperties(hex)
+          return {
+            field,
+            hex,
+            lightness: properties.lightness,
+            label: field,
+          }
+        })
 
+        // Calculate weighted average lightness
+        const avgLightness = calculateWeightedAverage(colorLightnessData.map((c) => c.lightness)) ?? 50
+
+        // Get extremos data (min/max lightness and difference)
+        const extremosData = getProfundidadeExtremosData(colorLightnessData)
+        const { lightnessDifference } = extremosData
+
+        // Calculate profundidade value from contrast and luminosity
+        const profundidadeValue = calculateProfundidadeFromContrast(lightnessDifference, avgLightness)
+        const category = getLabelCategory(profundidadeValue, 'profundidade')
+
+        return {
+          ...prev,
+          profundidade: {
+            value: profundidadeValue,
+            category,
+          },
+        }
+      })
     }
   }
 
@@ -319,7 +352,7 @@ export default function PigmentAnalysisStep({
             {ANALYSIS_STEPS[currentSubStep].title}
           </h2>
           <div className="flex items-center gap-2">
-            {currentSubStep < 2 && !isReadOnly && isAdmin && (
+            {currentSubStep < 3 && !isReadOnly && (
               <Button
                 type="default"
                 icon={<AimOutlined />}
