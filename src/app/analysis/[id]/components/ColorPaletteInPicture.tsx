@@ -106,7 +106,7 @@ const getDesaturatedDarkenedColor = (hex: string, darknessAmount: number = 0): s
   const rgb = hexToRgb(hex)
   // First convert to grayscale RGB (equal values for all channels based on luminosity)
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b)
-  const grayValue = round2Decimals((hsl.l / 100) * 255)
+  const grayValue = Math.round((hsl.l / 100) * 255)
   // Then apply darkness by reducing the gray value
   return adjustDarknessRGB(grayValue, grayValue, grayValue, darknessAmount)
 }
