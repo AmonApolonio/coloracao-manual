@@ -155,7 +155,7 @@ export const ProfundidadeStep = ({
                   </div>
                   <div className="border-t border-gray-400 pt-1">
                     <div className="text-xs mb-1">Soma ponderada / Peso total = Média</div>
-                    <div className="font-semibold">Resultado: {avgLightness}%</div>
+                    <div className="font-semibold">Resultado: {round2Decimals(profundidadeDetails.luminosidadeMedia)}%</div>
                   </div>
                 </div>
               }
@@ -166,8 +166,8 @@ export const ProfundidadeStep = ({
                 <Text type="secondary" className="text-xs mb-1">
                   Luminosidade Média
                 </Text>
-                <Text code className="text-base hover:text-blue-500">
-                  {avgLightness}%
+                <Text code className="text-base">
+                  {round2Decimals(profundidadeDetails.luminosidadeMedia)}%
                 </Text>
               </div>
             </Tooltip>
@@ -178,7 +178,7 @@ export const ProfundidadeStep = ({
                   <div>Mais claro: {lightestColor?.label} ({maxLightness}%)</div>
                   <div>Mais escuro: {darkestColor?.label} ({minLightness}%)</div>
                   <div className="border-t border-gray-400 mt-1 pt-1">
-                    {maxLightness} - {minLightness} = <span className="font-semibold">{lightnessDifference}%</span>
+                    {maxLightness} - {minLightness} = <span className="font-semibold">{round2Decimals(profundidadeDetails.lightnessDifference)}%</span>
                   </div>
                 </div>
               }
@@ -189,8 +189,8 @@ export const ProfundidadeStep = ({
                 <Text type="secondary" className="text-xs mb-1">
                   Diferença Extremos
                 </Text>
-                <Text code className="text-base hover:text-blue-500">
-                  {lightnessDifference}%
+                <Text code className="text-base">
+                  {round2Decimals(profundidadeDetails.lightnessDifference)}%
                 </Text>
               </div>
             </Tooltip>
