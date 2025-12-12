@@ -9,9 +9,9 @@ import {  round2Decimals } from './PigmentAnalysisUtils'
 // Profundidade classification ranges
 export const PROFUNDIDADE_RANGES = [
   { min: 0, max: 12.5, label: 'Extremo Escuro', color: '#8b5cf6' },
-  { min: 12.5, max: 47, label: 'neutro Escuro', color: '#3b82f6' },
-  { min: 47, max: 53, label: 'neutro Puro', color: '#33d221' },
-  { min: 53, max: 87.5, label: 'neutro Claro', color: '#f97316' },
+  { min: 12.5, max: 47, label: 'Neutro Escuro', color: '#3b82f6' },
+  { min: 47, max: 53, label: 'Neutro Puro', color: '#33d221' },
+  { min: 53, max: 87.5, label: 'Neutro Claro', color: '#f97316' },
   { min: 87.5, max: 100, label: 'Extremo Claro', color: '#dc2626' },
 ]
 
