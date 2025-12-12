@@ -4,17 +4,19 @@
  * @param points Array of coordinates [x1, y1, x2, y2, ...]
  * @returns SVG path string (e.g., "M10,10 L20,20 L30,30")
  */
+
+import { round2Decimals } from '@/app/analysis/steps/shared/PigmentAnalysisUtils'
 export function pointsToSVGPath(points: number[]): string {
   if (points.length < 2) return ''
   if (points.length === 2) return `M${points[0]},${points[1]}`
 
   // Start with first point
-  let path = `M${Math.round(points[0])},${Math.round(points[1])}`
+  let path = `M${round2Decimals(points[0])},${round2Decimals(points[1])}`
 
   // Add line segments to each subsequent point
   for (let i = 2; i < points.length; i += 2) {
-    const x = Math.round(points[i])
-    const y = Math.round(points[i + 1])
+    const x = round2Decimals(points[i])
+    const y = round2Decimals(points[i + 1])
     path += ` L${x},${y}`
   }
 
@@ -185,9 +187,9 @@ export function calculateAverageColor(pixels: Uint8ClampedArray, strokeWidth: nu
   }
 
   // Calculate averages
-  r = Math.round(r / count)
-  g = Math.round(g / count)
-  b = Math.round(b / count)
+  r = round2Decimals(r / count)
+  g = round2Decimals(g / count)
+  b = round2Decimals(b / count)
 
   // Convert to hex
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0').toUpperCase()}`

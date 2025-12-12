@@ -1,5 +1,5 @@
-import { getColorProperties } from './colorConversion'
-import { calculateWeightedAverage } from './PigmentAnalysisUtils'
+
+import {  round2Decimals } from './PigmentAnalysisUtils'
 
 /**
  * Profundidade (Depth) Analysis Utilities
@@ -44,15 +44,6 @@ export interface ProfundidadeExtremosData {
 }
 
 /**
- * Profundidade calculation details for debugging/display
- */
-export interface ProfundidadeCalculationDetails {
-  lightnessDifference: number
-  luminosidadeMedia: number
-  profundidadeValue: number
-}
-
-/**
  * Get extremos data for profundidade (min/max lightness values)
  */
 export const getProfundidadeExtremosData = (
@@ -91,7 +82,7 @@ const getContrastRange = (lightnessDifference: number): { min: number; max: numb
 }
 
 /**
- * Map a value from one range to another (linear interpolation)
+ * Map a value from one range to another (linear interpolation with 2 decimal precision)
  */
 const mapRange = (
   value: number,
@@ -103,9 +94,10 @@ const mapRange = (
   // Clamp the input value to the input range
   const clampedValue = Math.max(inMin, Math.min(inMax, value))
   // Calculate the ratio in the input range
-  const ratio = (clampedValue - inMin) / (inMax - inMin)
+  const ratio = round2Decimals((clampedValue - inMin) / (inMax - inMin))
   // Map to the output range
-  return outMin + ratio * (outMax - outMin)
+  const result = outMin + ratio * (outMax - outMin)
+  return round2Decimals(result)
 }
 
 /**
@@ -174,7 +166,16 @@ const PROFUNDIDADE_MAPPING: Array<{
  * |      0-30 |      53-87.5 |     87.5-100 |
  * |      0-30 |     87.5-100 |     87.5-100 |
  */
-const calculateProfundidadeMathematically = (
+
+/**
+ * Calculate profundidade based on contrast (lightness difference) and luminosity (average lightness)
+ * Uses mathematical interpolation to map contrast/luminosity combinations to profundidade ranges (0-100)
+ * Returns value rounded to 2 decimal places with precision
+ *
+ * The formula uses linear interpolation within ranges defined by CONTRAST_RANGES
+ * and maps luminosity to appropriate profundidade output ranges.
+ */
+export const calculateProfundidadeMathematically = (
   lightnessDifference: number,
   luminosidadeMedia: number
 ): number => {
@@ -197,35 +198,5 @@ const calculateProfundidadeMathematically = (
     rangeMapping.outMax
   )
 
-  return Math.round(profundidade)
-}
-
-/**
- * Calculate profundidade based on contrast (lightness difference) and luminosity (average lightness)
- * Uses mathematical interpolation to map contrast/luminosity combinations to profundidade ranges (0-100)
- *
- * The formula uses linear interpolation within ranges defined by CONTRAST_RANGES
- * and maps luminosity to appropriate profundidade output ranges.
- */
-export const calculateProfundidadeFromContrast = (
-  lightnessDifference: number,
-  luminosidadeMedia: number
-): number => {
-  return getProfundidadeCalculationDetails(lightnessDifference, luminosidadeMedia).profundidadeValue
-}
-
-/**
- * Get profundidade calculation details for debugging/display
- */
-export const getProfundidadeCalculationDetails = (
-  lightnessDifference: number,
-  luminosidadeMedia: number
-): ProfundidadeCalculationDetails => {
-  const profundidadeValue = calculateProfundidadeMathematically(lightnessDifference, luminosidadeMedia)
-
-  return {
-    lightnessDifference,
-    luminosidadeMedia,
-    profundidadeValue,
-  }
+  return profundidade
 }

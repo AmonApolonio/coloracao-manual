@@ -22,20 +22,33 @@ export {
 // Pigment analysis utilities
 export {
   COLOR_FIELDS,
-  TEMPERATURE_RANGES,
-  INTENSIDADE_RANGES,
   ANALYSIS_STEPS,
   getLabelCategory,
   getLabelColor,
 } from './PigmentAnalysisUtils'
+
+// Temperatura utilities
+export {
+  TEMPERATURE_RANGES,
+  calculateTemperaturaPosition,
+  getTemperaturaCalculationDetails,
+} from './temperaturaUtils'
+export type { TemperaturaCalculationDetails } from './temperaturaUtils'
+
+// Intensidade utilities
+export {
+  INTENSIDADE_RANGES,
+  calculateIntensidadePosition,
+  getIntensidadeCalculationDetails,
+} from './intensidadeUtils'
+export type { IntensidadeCalculationDetails } from './intensidadeUtils'
 
 // Profundidade utilities
 export {
   PROFUNDIDADE_RANGES,
   CONTRAST_RANGES,
   getProfundidadeExtremosData,
-  calculateProfundidadeFromContrast,
-  getProfundidadeCalculationDetails,
+  calculateProfundidadeMathematically,
 } from './profundidadeUtils'
 
 // Season detection utilities

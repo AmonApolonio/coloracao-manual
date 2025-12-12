@@ -7,6 +7,7 @@ import { DeleteOutlined, UndoOutlined, SaveOutlined } from '@ant-design/icons'
 import Konva from 'konva'
 import { ColorField, SVGVectorData, SVGVector } from '@/lib/types'
 import { pointsToSVGPath } from '@/lib/svg-utils'
+import { round2Decimals } from '@/app/analysis/steps/shared/PigmentAnalysisUtils'
 
 interface InteractiveColorExtractionStepProps {
   userFacePhotoUrl: string | null
@@ -406,9 +407,9 @@ const InteractiveColorExtractionStepComponent = forwardRef<
         }
 
         // Calculate averages
-        r = Math.round(r / count)
-        g = Math.round(g / count)
-        b = Math.round(b / count)
+        r = round2Decimals(r / count)
+        g = round2Decimals(g / count)
+        b = round2Decimals(b / count)
 
         const hex = `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0').toUpperCase()}`
         return hex

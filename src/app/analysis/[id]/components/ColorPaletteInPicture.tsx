@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { CloseOutlined, ExpandOutlined, CompressOutlined } from '@ant-design/icons'
+import { CloseOutlined, ExpandOutlined, CompressOutlined, CopyOutlined } from '@ant-design/icons'
 import { App as AntdApp } from 'antd'
 import { SVGVectorData } from '@/lib/types-db'
+import { round2Decimals } from '@/app/analysis/steps/shared/PigmentAnalysisUtils'
 
 interface ColorPaletteInPictureProps {
   extractedColors: SVGVectorData
@@ -82,9 +83,9 @@ const rgbToHsl = (r: number, g: number, b: number): { h: number; s: number; l: n
   }
 
   return {
-    h: Math.round(h * 360),
-    s: Math.round(s * 100),
-    l: Math.round(l * 100),
+    h: round2Decimals(h * 360),
+    s: round2Decimals(s * 100),
+    l: round2Decimals(l * 100),
   }
 }
 
@@ -105,7 +106,7 @@ const getDesaturatedDarkenedColor = (hex: string, darknessAmount: number = 0): s
   const rgb = hexToRgb(hex)
   // First convert to grayscale RGB (equal values for all channels based on luminosity)
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b)
-  const grayValue = Math.round((hsl.l / 100) * 255)
+  const grayValue = round2Decimals((hsl.l / 100) * 255)
   // Then apply darkness by reducing the gray value
   return adjustDarknessRGB(grayValue, grayValue, grayValue, darknessAmount)
 }
@@ -274,8 +275,8 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
       setPreExpandState(null)
     } else {
       setPreExpandState({ position, size })
-      setSize({ width: 500, height: 580 })
-      setPosition({ x: window.innerWidth / 2 - 250, y: window.innerHeight / 2 - 290 })
+      setSize({ width: 430, height: 490 })
+      setPosition({ x: window.innerWidth / 2 - 215, y: window.innerHeight / 2 - 240 })
     }
     setIsExpanded(!isExpanded)
   }
@@ -369,6 +370,44 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
             {toneMode === 'grayscale' && 'Escala de Cinza'}
           </button>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const colorMap: Record<string, string> = {
+                  raiz_cabelo: 'hair_root',
+                  sobrancelha: 'eyebrows',
+                  iris: 'iris',
+                  testa: 'forehead',
+                  bochecha: 'cheek',
+                  cavidade_ocular: 'under_eye_skin',
+                  queixo: 'chin',
+                  contorno_boca: 'mouth_contour',
+                  boca: 'mouth',
+                }
+                
+                const colorsObj: Record<string, string> = {}
+                COLOR_FIELD_ORDER.forEach(field => {
+                  if (extractedColors[field]) {
+                    const mappedKey = colorMap[field]
+                    if (mappedKey) {
+                      colorsObj[mappedKey] = extractedColors[field]!.hex_color
+                    }
+                  }
+                })
+                
+                const jsonString = `"colors": {
+        ${Object.entries(colorsObj)
+          .map(([key, value]) => `"${key}": "${value}"`)
+          .join(',\n        ')}
+        }`
+                
+                navigator.clipboard.writeText(jsonString)
+                message.success('Cores originais copiadas!')
+              }}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150"
+              title="Copiar cores originais"
+            >
+              <CopyOutlined className="text-xs" />
+            </button>
             <button
               onClick={toggleExpand}
               className="w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-black/5 transition-all duration-150"

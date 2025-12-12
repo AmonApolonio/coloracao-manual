@@ -7,8 +7,10 @@ import { SVGVectorData } from '@/lib/types'
 import { PigmentTemperatureDataUI, ProfundidadeDataUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
 import { PigmentAnalysisDataDB } from '@/lib/types-db'
 import { convertUIToDB, convertDBToUI } from '@/lib/pigment-conversion'
-import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateTemperaturaPosition, calculateIntensidadePosition, calculateWeightedAverage } from '../shared/PigmentAnalysisUtils'
-import { getProfundidadeExtremosData, calculateProfundidadeFromContrast } from '../shared/profundidadeUtils'
+import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateWeightedAverage } from '../shared/PigmentAnalysisUtils'
+import { calculateTemperaturaPosition } from '../shared/temperaturaUtils'
+import { calculateIntensidadePosition } from '../shared/intensidadeUtils'
+import { getProfundidadeExtremosData, calculateProfundidadeMathematically } from '../shared/profundidadeUtils'
 import { getColorProperties } from '../shared/colorConversion'
 import { SliderStepComponent } from './components/SliderStepComponent'
 import { ProfundidadeStep } from './components/ProfundidadeStep'
@@ -274,7 +276,7 @@ export default function PigmentAnalysisStep({
         const { lightnessDifference } = extremosData
 
         // Calculate profundidade value from contrast and luminosity
-        const profundidadeValue = calculateProfundidadeFromContrast(lightnessDifference, avgLightness)
+        const profundidadeValue = calculateProfundidadeMathematically(lightnessDifference, avgLightness)
         const category = getLabelCategory(profundidadeValue, 'profundidade')
 
         return {

@@ -1,7 +1,8 @@
 'use client'
 
 import { Tooltip, Typography, InputNumber } from 'antd'
-import { TemperaturaCalculationDetails, IntensidadeCalculationDetails } from '../../shared/PigmentAnalysisUtils'
+import { TemperaturaCalculationDetails } from '../../shared/temperaturaUtils'
+import { IntensidadeCalculationDetails } from '../../shared/intensidadeUtils'
 
 const { Text } = Typography
 

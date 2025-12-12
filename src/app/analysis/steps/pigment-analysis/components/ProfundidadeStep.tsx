@@ -4,8 +4,8 @@ import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { Slider, Tag, Typography, Tooltip } from 'antd'
 import { ProfundidadeDataUI } from '@/lib/types-ui'
 import { getColorProperties, hexToRgb, rgbToHsl } from '../../shared/colorConversion'
-import { calculateWeightedAverage, COLOR_FIELDS, getLabelColor, getWeightForValue } from '../../shared/PigmentAnalysisUtils'
-import { getProfundidadeExtremosData, calculateProfundidadeFromContrast, getProfundidadeCalculationDetails } from '../../shared/profundidadeUtils'
+import { calculateWeightedAverage, COLOR_FIELDS, getLabelColor, getWeightForValue, round2Decimals } from '../../shared/PigmentAnalysisUtils'
+import { getProfundidadeExtremosData, calculateProfundidadeMathematically } from '../../shared/profundidadeUtils'
 
 const { Text } = Typography
 
@@ -107,8 +107,12 @@ export const ProfundidadeStep = ({
   const { minLightness, maxLightness, lightnessDifference, darkestColor, lightestColor } = extremosData
 
   // Calculate profundidade marker position based on contrast and luminosity
-  const calculatedProfundidade = calculateProfundidadeFromContrast(lightnessDifference, avgLightness)
-  const profundidadeDetails = getProfundidadeCalculationDetails(lightnessDifference, avgLightness)
+  const calculatedProfundidade = calculateProfundidadeMathematically(lightnessDifference, avgLightness)
+  const profundidadeDetails = {
+    lightnessDifference,
+    luminosidadeMedia: avgLightness,
+    profundidadeValue: calculatedProfundidade,
+  }
 
   return (
     <div className="space-y-6">
@@ -217,9 +221,9 @@ export const ProfundidadeStep = ({
                 title={
                   <div className="text-xs space-y-1">
                     <div className="font-semibold">Profundidade</div>
-                    <div>Contraste: {Math.round(profundidadeDetails.lightnessDifference)}</div>
-                    <div>Luminosidade: {Math.round(profundidadeDetails.luminosidadeMedia)}</div>
-                    <div className="border-t border-gray-400 pt-1">Resultado: {Math.round(profundidadeDetails.profundidadeValue)}</div>
+                    <div>Contraste: {round2Decimals(profundidadeDetails.lightnessDifference)}</div>
+                    <div>Luminosidade: {round2Decimals(profundidadeDetails.luminosidadeMedia)}</div>
+                    <div className="border-t border-gray-400 pt-1">Resultado: {round2Decimals(profundidadeDetails.profundidadeValue)}</div>
                   </div>
                 }
                 color="#fff"
@@ -235,7 +239,7 @@ export const ProfundidadeStep = ({
                 >
                   <div className="w-2 h-full bg-red-500 border-y-0 border-x-[2px] border-white cursor-help" />
                   <div className="absolute bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-auto cursor-help">
-                    {Math.round(profundidadeDetails.profundidadeValue)}
+                    {round2Decimals(profundidadeDetails.profundidadeValue)}
                   </div>
                 </div>
               </Tooltip>

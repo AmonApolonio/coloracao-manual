@@ -3,6 +3,8 @@
  * Converts between different color spaces: RGB, HSL, HSV, Lab, HCL
  */
 
+import { round2Decimals } from './PigmentAnalysisUtils'
+
 // Convert hex to RGB
 export const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
@@ -15,7 +17,7 @@ export const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
     : { r: 0, g: 0, b: 0 }
 }
 
-// Convert RGB to HSL
+// Convert RGB to HSL (returns values rounded to 2 decimal places)
 export const rgbToHsl = (r: number, g: number, b: number) => {
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
@@ -42,13 +44,13 @@ export const rgbToHsl = (r: number, g: number, b: number) => {
   }
 
   return {
-    h: Math.round(h * 360),
-    s: Math.round(s * 100),
-    l: Math.round(l * 100),
+    h: round2Decimals(h * 360),
+    s: round2Decimals(s * 100),
+    l: round2Decimals(l * 100),
   }
 }
 
-// Convert RGB to HSV
+// Convert RGB to HSV (returns values rounded to 2 decimal places)
 export const rgbToHsv = (r: number, g: number, b: number) => {
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
@@ -73,9 +75,9 @@ export const rgbToHsv = (r: number, g: number, b: number) => {
   }
 
   return {
-    h: Math.round(h * 360),
-    s: Math.round(s * 100),
-    v: Math.round(v * 100),
+    h: round2Decimals(h * 360),
+    s: round2Decimals(s * 100),
+    v: round2Decimals(v * 100),
   }
 }
 
@@ -190,16 +192,16 @@ export const rgbToLab = (r: number, g: number, b: number) => {
   return xyzToLab(xyz.x, xyz.y, xyz.z)
 }
 
-// Convert Lab to HCL
+// Convert Lab to HCL (returns values rounded to 2 decimal places)
 export const labToHcl = (l: number, a: number, b: number) => {
   const c = Math.sqrt(a * a + b * b)
   let h = Math.atan2(b, a) * (180 / Math.PI)
   if (h < 0) h += 360
 
   return {
-    h: Math.round(h),
-    c: Math.round(c),
-    l: Math.round(l),
+    h: round2Decimals(h),
+    c: round2Decimals(c),
+    l: round2Decimals(l),
   }
 }
 

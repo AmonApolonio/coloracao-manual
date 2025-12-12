@@ -4,7 +4,9 @@ import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { Slider, Tag, Typography } from 'antd'
 import { PigmentTemperatureDataUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl, getColorProperties, getHclFromHex, hclToHex, getHsvFromHex, hsvToHex } from '../../shared/colorConversion'
-import { COLOR_FIELDS, getLabelColor, DEFAULT_RANGES, ColorFieldKey, getTemperaturaCalculationDetails, getIntensidadeCalculationDetails } from '../../shared/PigmentAnalysisUtils'
+import { COLOR_FIELDS, getLabelColor, DEFAULT_RANGES, ColorFieldKey } from '../../shared/PigmentAnalysisUtils'
+import { getTemperaturaCalculationDetails } from '../../shared/temperaturaUtils'
+import { getIntensidadeCalculationDetails } from '../../shared/intensidadeUtils'
 import { ColorScaleWithMarker } from './ColorScaleWithMarker'
 
 const { Text } = Typography
