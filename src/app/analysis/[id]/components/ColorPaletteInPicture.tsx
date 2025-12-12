@@ -138,7 +138,7 @@ const SLIDER_STYLES = `
     border-radius: 50%;
     background: white;
     cursor: pointer;
-    border: 2px solid #fbbf24;
+    border: 2px solid #947B62;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
   }
@@ -154,7 +154,7 @@ const SLIDER_STYLES = `
     border-radius: 50%;
     background: white;
     cursor: pointer;
-    border: 2px solid #fbbf24;
+    border: 2px solid #947B62;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: all 0.2s ease;
   }
@@ -333,7 +333,7 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
     <div
       ref={containerRef}
       className={`
-        fixed z-[9999] bg-gradient-to-br from-white/50 to-white/20 backdrop-blur-xl rounded-2xl shadow-2xl
+        fixed z-[9999] bg-gradient-to-br from-white/50 to-white/10 backdrop-blur-xl rounded-2xl shadow-2xl
         border-none ring-4 ring-white/20 overflow-hidden
         transition-shadow duration-200
         ${isDragging ? 'shadow-3xl cursor-grabbing' : 'cursor-grab'}
@@ -349,7 +349,7 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
     >
       <style>{SLIDER_STYLES}</style>
       {/* Header bar */}
-      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/5 to-transparent flex flex-col z-20">
+      <div className="absolute top-0 left-0 right-0 bg-white/30 backdrop-blur-xl flex flex-col z-20">
         <div className="h-10 flex items-center justify-between px-3">
           <button
             onClick={() => {
@@ -360,15 +360,13 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
               setBrightnessAmount(0)
             }}
             className={`px-2 py-1 text-xs rounded-full font-medium transition-all duration-150 ${
-              toneMode === 'colored'
-                ? 'text-white hover:opacity-90'
-                : 'bg-gray-700 text-white hover:bg-gray-800'
+              toneMode === 'grayscale'
+                ? 'bg-gray-700 text-white hover:bg-gray-800'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
-            style={toneMode === 'colored' ? { backgroundColor: '#947B62' } : {}}
-            title="Alternar entre escalas: Colorida, Cinza"
+            title="Ativar/desativar escala de cinza"
           >
-            {toneMode === 'colored' && 'Escala Colorida'}
-            {toneMode === 'grayscale' && 'Escala de Cinza'}
+            {toneMode === 'grayscale' ? 'Escala Colorida' : 'Escala de Cinza'}
           </button>
           <div className="flex items-center gap-2">
             <button
@@ -404,7 +402,7 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
                 navigator.clipboard.writeText(jsonString)
                 message.success('Cores originais copiadas!')
               }}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150"
+              className="w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-black/5 transition-all duration-150"
               title="Copiar cores originais"
             >
               <CopyOutlined className="text-xs" />

@@ -170,7 +170,7 @@ export function PictureInPicture({ imageUrl, alt, onClose }: PictureInPicturePro
     <div
       ref={containerRef}
       className={`
-        fixed z-[9999] bg-gradient-to-br from-white/50 to-white/20 backdrop-blur-xl rounded-2xl shadow-2xl
+        fixed z-[9999] bg-gradient-to-br from-white/50 to-white/10 backdrop-blur-xl rounded-2xl shadow-2xl
         border-none ring-4 ring-white/20 overflow-hidden
         transition-shadow duration-200
         ${isDragging ? 'shadow-3xl cursor-grabbing' : 'cursor-grab'}
@@ -185,7 +185,7 @@ export function PictureInPicture({ imageUrl, alt, onClose }: PictureInPicturePro
       onMouseDown={handleDragStart}
     >
       {/* Header bar */}
-      <div className="pip-controls absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-black/5 to-transparent flex items-center justify-between px-3 z-20">
+      <div className="pip-controls absolute top-0 left-0 right-0 h-10 bg-white/30 backdrop-blur-xl flex items-center justify-between px-3 z-20">
         <button
           onClick={() => setIsGrayscale(!isGrayscale)}
           className={`px-2 py-1 text-xs rounded-full font-medium transition-all duration-150 ${isGrayscale
@@ -216,7 +216,7 @@ export function PictureInPicture({ imageUrl, alt, onClose }: PictureInPicturePro
 
       {/* Image container */}
       <div className="w-full h-full p-2 pt-10">
-        <div className="w-full h-full rounded-xl overflow-hidden bg-gray-100">
+        <div className="w-full h-full rounded-xl overflow-hidden bg-transparent">
           <img
             src={imageUrl}
             alt={alt}
