@@ -170,8 +170,8 @@ export function PictureInPicture({ imageUrl, alt, onClose }: PictureInPicturePro
     <div
       ref={containerRef}
       className={`
-        fixed z-[9999] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl
-        border border-gray-200/50 overflow-hidden
+        fixed z-[9999] bg-gradient-to-br from-white/50 to-white/20 backdrop-blur-xl rounded-2xl shadow-2xl
+        border-none ring-4 ring-white/20 overflow-hidden
         transition-shadow duration-200
         ${isDragging ? 'shadow-3xl cursor-grabbing' : 'cursor-grab'}
         ${isResizing ? 'select-none' : ''}
@@ -186,23 +186,17 @@ export function PictureInPicture({ imageUrl, alt, onClose }: PictureInPicturePro
     >
       {/* Header bar */}
       <div className="pip-controls absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-black/5 to-transparent flex items-center justify-between px-3 z-20">
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-gray-300" />
-          <div className="w-2 h-2 rounded-full bg-gray-300" />
-          <div className="w-2 h-2 rounded-full bg-gray-300" />
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsGrayscale(!isGrayscale)}
-            className={`px-2 py-1 text-xs rounded-full font-medium transition-all duration-150 ${
-              isGrayscale
-                ? 'bg-gray-700 text-white hover:bg-gray-800'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        <button
+          onClick={() => setIsGrayscale(!isGrayscale)}
+          className={`px-2 py-1 text-xs rounded-full font-medium transition-all duration-150 ${isGrayscale
+              ? 'bg-gray-700 text-white hover:bg-gray-800'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
-            title="Ativar/desativar escala de cinza"
-          >
-            {isGrayscale ? 'Escala Colorida' : 'Escala de Cinza'}
-          </button>
+          title="Ativar/desativar escala de cinza"
+        >
+          {isGrayscale ? 'Escala Colorida' : 'Escala de Cinza'}
+        </button>
+        <div className="flex items-center gap-2">
           <button
             onClick={toggleExpand}
             className="w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-black/5 transition-all duration-150"

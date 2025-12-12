@@ -333,8 +333,8 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
     <div
       ref={containerRef}
       className={`
-        fixed z-[9999] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl
-        border border-gray-200/50 overflow-hidden
+        fixed z-[9999] bg-gradient-to-br from-white/50 to-white/20 backdrop-blur-xl rounded-2xl shadow-2xl
+        border-none ring-4 ring-white/20 overflow-hidden
         transition-shadow duration-200
         ${isDragging ? 'shadow-3xl cursor-grabbing' : 'cursor-grab'}
         ${isResizing ? 'select-none' : ''}
@@ -357,6 +357,7 @@ export function ColorPaletteInPicture({ extractedColors, onClose }: ColorPalette
               const currentIndex = modes.indexOf(toneMode)
               const nextIndex = (currentIndex + 1) % modes.length
               setToneMode(modes[nextIndex])
+              setBrightnessAmount(0)
             }}
             className={`px-2 py-1 text-xs rounded-full font-medium transition-all duration-150 ${
               toneMode === 'colored'
