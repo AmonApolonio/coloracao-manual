@@ -37,6 +37,7 @@ interface AnalysisHeaderProps {
   onSaveAndExit: (svgVectorData: any) => Promise<void>
   onCompleteAnalysis: (colorSeason?: ColorSeason | null) => Promise<void>
   isReadOnly?: boolean
+  isAdmin?: boolean
 }
 
 export function AnalysisHeader({
@@ -57,6 +58,7 @@ export function AnalysisHeader({
   onSaveAndExit,
   onCompleteAnalysis,
   isReadOnly,
+  isAdmin,
 }: AnalysisHeaderProps) {
   const router = useRouter()
   const { message } = AntdApp.useApp()
@@ -289,19 +291,23 @@ export function AnalysisHeader({
             </h1>
             <Badge
               status={
-                analysis.status === 'completed'
-                  ? 'success'
-                  : analysis.status === 'in_process'
-                    ? 'processing'
-                    : 'default'
+                isAdmin
+                  ? 'error'
+                  : analysis.status === 'completed'
+                    ? 'success'
+                    : analysis.status === 'in_process'
+                      ? 'processing'
+                      : 'default'
               }
               text={
-                <span className={`text-xs text-gray-500 transition-all duration-300 opacity-100`}>
-                  {analysis.status === 'completed'
-                    ? 'Concluída'
-                    : analysis.status === 'in_process'
-                      ? 'Em Progresso'
-                      : 'Não Iniciada'}
+                <span className={`text-xs transition-all duration-300 opacity-100 ${isAdmin ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                  {isAdmin
+                    ? 'Teste Interno - Tantto'
+                    : analysis.status === 'completed'
+                      ? 'Concluída'
+                      : analysis.status === 'in_process'
+                        ? 'Em Progresso'
+                        : 'Não Iniciada'}
                 </span>
               }
             />

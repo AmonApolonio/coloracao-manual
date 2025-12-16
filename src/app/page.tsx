@@ -344,6 +344,29 @@ export default function Home() {
     <Layout className="min-h-screen bg-background">
       <Content className="p-8">
         <div className="max-w-4xl mx-auto">
+          {isAdmin && (
+            <div className="flex gap-3 mb-6 items-center">
+              {/* Logo Box */}
+              <div 
+                className="flex items-center justify-center px-4 py-3 rounded-lg flex-shrink-0" 
+                style={{ 
+                  backgroundColor: '#F5F0EA',
+                  border: '1px solid #E8DECC'
+                }}
+              >
+                <img 
+                  src="/admin_logo.png" 
+                  alt="Admin Logo" 
+                  className="h-8 w-auto"
+                />
+              </div>
+              
+              {/* Text */}
+              <h2 className="text-lg font-semibold" style={{ color: '#2C2C2C' }}>
+                Testes Internos
+              </h2>
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center min-h-96">
               <Spin size="large" />

@@ -8,11 +8,13 @@ import { type InteractiveColorExtractionStepHandle } from '../steps/color-extrac
 import { useAnalysisData, useAnalysisSave } from './hooks'
 import { AnalysisHeader, StepContent } from './components'
 import { AnalysisPageProps } from './types'
+import { useAuth } from '@/app/context/AuthContext'
 
 const { Content } = Layout
 
 export default function AnalysisPage({ params }: AnalysisPageProps) {
   const { id: analysisId } = use(params)
+  const { isAdmin } = useAuth()
   const colorExtractionRef = useRef<InteractiveColorExtractionStepHandle>(null)
   const [selectedColorSeason, setSelectedColorSeason] = useState<ColorSeason | null>(null)
 
@@ -99,6 +101,7 @@ export default function AnalysisPage({ params }: AnalysisPageProps) {
           onSaveAndExit={handleSaveAndExit}
           onCompleteAnalysis={handleCompleteAnalysis}
           isReadOnly={isReadOnly}
+          isAdmin={isAdmin}
         />
 
         {/* Step Content */}
