@@ -50,6 +50,13 @@ export const convertDBToUI = (
     profundidade: dbData.geral?.profundidade ?? null,
   }
 
+  // Copy geralAvg as-is
+  uiData.geralAvg = {
+    temperatura: dbData.geralAvg?.temperatura ?? null,
+    intensidade: dbData.geralAvg?.intensidade ?? null,
+    profundidade: dbData.geralAvg?.profundidade ?? null,
+  }
+
   return uiData
 }
 
@@ -98,6 +105,15 @@ export const convertUIToDB = (uiData: PigmentAnalysisDataUI): PigmentAnalysisDat
     if (uiData.geral.profundidade !== null) geralDB.profundidade = uiData.geral.profundidade
     if (Object.keys(geralDB).length > 0) {
       dbData.geral = geralDB as any
+    }
+  }
+
+  // Copy geralAvg as-is
+  if (uiData.geralAvg) {
+    dbData.geralAvg = {
+      temperatura: uiData.geralAvg.temperatura,
+      intensidade: uiData.geralAvg.intensidade,
+      profundidade: uiData.geralAvg.profundidade,
     }
   }
 

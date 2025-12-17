@@ -28,4 +28,9 @@ export interface PigmentAnalysisDataUI {
     intensidade: number | null;
     profundidade: number | null;
   };
+  geralAvg?: {
+    temperatura: number | null;
+    intensidade: number | null;
+    profundidade: number | null;
+  };
 }

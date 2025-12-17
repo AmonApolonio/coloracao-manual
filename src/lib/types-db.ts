@@ -34,6 +34,11 @@ export interface PigmentAnalysisDataDB {
     intensidade: number;
     profundidade: number;
   };
+  geralAvg?: {
+    temperatura: number | null;
+    intensidade: number | null;
+    profundidade: number | null;
+  };
 }
 
 // ========== MASK ANALYSIS DATABASE TYPES ==========

@@ -417,3 +417,134 @@ export function detectSeasonFromSliders(
 
   return null
 }
+
+/**
+ * Check if a range is considered "extreme"
+ * Extreme ranges: 0-12.5 and 87.5-100
+ */
+function isExtremeRange(range: string): boolean {
+  return range === '0-12.5' || range === '87.5-100'
+}
+
+/**
+ * Normalize values when both are in extreme ranges
+ * Only one parameter can be extreme at a time in valid combinations
+ * If both are extreme, adjust the less extreme one to a non-extreme range
+ */
+function normalizeExtremeValues(
+  temperatura: number,
+  profundidade: number
+): { temperatura: number; profundidade: number } {
+  // Helper function to determine range category
+  const getRange = (value: number): string => {
+    if (value < 12.5) return '0-12.5'
+    if (value < 50) return '12.5-50'
+    if (value < 87.5) return '50-87.5'
+    return '87.5-100'
+  }
+
+  const tempRange = getRange(temperatura)
+  const profRange = getRange(profundidade)
+
+  // Check if both are extreme
+  if (!isExtremeRange(tempRange) || !isExtremeRange(profRange)) {
+    // At least one is not extreme, no normalization needed
+    return { temperatura, profundidade }
+  }
+
+  // Both are extreme, find which is MORE extreme (farther from 50)
+  const tempDistance = Math.abs(temperatura - 50)
+  const profDistance = Math.abs(profundidade - 50)
+
+  // Normalize the less extreme one to a non-extreme range
+  if (tempDistance <= profDistance) {
+    // Temperatura is less extreme (or equally extreme), normalize it
+    if (temperatura > 50) {
+      // In 87.5-100 range, move to 50-87.5 range (pick 75 - middle of non-extreme range)
+      return { temperatura: 75, profundidade }
+    } else {
+      // In 0-12.5 range, move to 12.5-50 range (pick 25 - middle of non-extreme range)
+      return { temperatura: 25, profundidade }
+    }
+  } else {
+    // Profundidade is less extreme, normalize it
+    if (profundidade > 50) {
+      // In 87.5-100 range, move to 50-87.5 range (pick 75)
+      return { temperatura, profundidade: 75 }
+    } else {
+      // In 0-12.5 range, move to 12.5-50 range (pick 25)
+      return { temperatura, profundidade: 25 }
+    }
+  }
+}
+
+/**
+ * Detect season from only temperatura and profundidade (2-rule/Regra dos 2)
+ * Uses a mapping table based on the ranges of these two attributes
+ */
+export function detectSeasonFromSlidersTwoRule(
+  temperatura: number | null,
+  profundidade: number | null
+): { season: Season; variant: SeasonVariant; colorSeason: ColorSeason } | null {
+  if (temperatura === null || profundidade === null) {
+    return null
+  }
+
+  // Normalize if both values are in extreme ranges
+  const normalized = normalizeExtremeValues(temperatura, profundidade)
+  const normalizedTemp = normalized.temperatura
+  const normalizedProf = normalized.profundidade
+
+  // Helper function to determine range category
+  const getRange = (value: number): string => {
+    if (value < 12.5) return '0-12.5'
+    if (value < 50) return '12.5-50'
+    if (value < 87.5) return '50-87.5'
+    return '87.5-100'
+  }
+
+  const tempRange = getRange(normalizedTemp)
+  const profRange = getRange(normalizedProf)
+
+  // Mapping table from temperatura and profundidade ranges to seasons
+  const rangeMap: Record<string, { season: Season; variant: SeasonVariant }> = {
+    // Temperatura 50–87.5
+    '50-87.5|50-87.5': { season: 'Primavera', variant: 'Brilhante' },
+    '50-87.5|0-12.5': { season: 'Outono', variant: 'Escuro' },
+    '50-87.5|12.5-50': { season: 'Outono', variant: 'Suave' },
+    '50-87.5|87.5-100': { season: 'Primavera', variant: 'Claro' },
+
+    // Temperatura 12.5–50
+    '12.5-50|12.5-50': { season: 'Inverno', variant: 'Brilhante' },
+    '12.5-50|87.5-100': { season: 'Verão', variant: 'Claro' },
+    '12.5-50|50-87.5': { season: 'Verão', variant: 'Suave' },
+    '12.5-50|0-12.5': { season: 'Inverno', variant: 'Escuro' },
+
+    // Temperatura 87.5–100
+    '87.5-100|50-87.5': { season: 'Primavera', variant: 'Quente' },
+    '87.5-100|12.5-50': { season: 'Outono', variant: 'Quente' },
+
+    // Temperatura 0–12.5
+    '0-12.5|50-87.5': { season: 'Verão', variant: 'Frio' },
+    '0-12.5|12.5-50': { season: 'Inverno', variant: 'Frio' },
+  }
+
+  const key = `${tempRange}|${profRange}`
+  const match = rangeMap[key]
+
+  if (match) {
+    try {
+      const season = match.season as Season
+      const colorSeason = getColorSeason(season, match.variant)
+      return {
+        season,
+        variant: match.variant,
+        colorSeason,
+      }
+    } catch {
+      return null
+    }
+  }
+
+  return null
+}

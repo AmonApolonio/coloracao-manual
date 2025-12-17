@@ -2,6 +2,7 @@ import { ColorField } from '@/lib/types'
 import { PROFUNDIDADE_RANGES } from './profundidadeUtils'
 import { TEMPERATURE_RANGES } from './temperaturaUtils'
 import { INTENSIDADE_RANGES } from './intensidadeUtils'
+import { PigmentTemperatureDataUI, ProfundidadeDataUI } from '@/lib/types-ui'
 
 /**
  * Helper function to round values to 2 decimal places with precision
@@ -136,6 +137,34 @@ export const getLabelColor = (
     }
   }
   return '#8b5cf6'
+}
+
+/**
+ * Calculate average value from step data
+ * For profundidade: returns the single value
+ * For temperatura and intensidade: returns weighted average
+ */
+export const calculateAverageFromStep = (
+  stepData: PigmentTemperatureDataUI | ProfundidadeDataUI | undefined,
+  stepKey: 'temperatura' | 'intensidade' | 'profundidade'
+): number | null => {
+  if (!stepData) return null
+
+  if (stepKey === 'profundidade') {
+    // For profundidade: just return the single value
+    const profData = stepData as ProfundidadeDataUI
+    return profData.value
+  } else {
+    // For temperatura and intensidade: use weighted average
+    const tempData = stepData as PigmentTemperatureDataUI
+    const values = Object.values(tempData)
+      .filter((v) => v.temperature !== null)
+      .map((v) => v.temperature as number)
+
+    if (values.length === 0) return null
+
+    return calculateWeightedAverage(values)
+  }
 }
 
 

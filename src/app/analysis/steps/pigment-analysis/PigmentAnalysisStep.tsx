@@ -7,7 +7,7 @@ import { SVGVectorData } from '@/lib/types'
 import { PigmentTemperatureDataUI, ProfundidadeDataUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
 import { PigmentAnalysisDataDB } from '@/lib/types-db'
 import { convertUIToDB, convertDBToUI } from '@/lib/pigment-conversion'
-import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateWeightedAverage } from '../shared/PigmentAnalysisUtils'
+import { getLabelCategory, COLOR_FIELDS, ANALYSIS_STEPS, calculateWeightedAverage, calculateAverageFromStep } from '../shared/PigmentAnalysisUtils'
 import { calculateTemperaturaPosition } from '../shared/temperaturaUtils'
 import { calculateIntensidadePosition } from '../shared/intensidadeUtils'
 import { getProfundidadeExtremosData, calculateProfundidadeMathematically } from '../shared/profundidadeUtils'
@@ -156,6 +156,18 @@ export default function PigmentAnalysisStep({
       !isLoadingDataRef.current
     ) {
       const dbData = convertUIToDB(analysisData)
+      
+      // Calculate and add average values
+      const avgTemperatura = calculateAverageFromStep(analysisData.temperatura, 'temperatura')
+      const avgIntensidade = calculateAverageFromStep(analysisData.intensidade, 'intensidade')
+      const avgProfundidade = calculateAverageFromStep(analysisData.profundidade, 'profundidade')
+
+      dbData.geralAvg = {
+        temperatura: avgTemperatura,
+        intensidade: avgIntensidade,
+        profundidade: avgProfundidade,
+      }
+
       onDataChangeRef.current(dbData)
     }
   }, [analysisData, extractedColors])

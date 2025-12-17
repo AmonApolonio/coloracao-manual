@@ -1,15 +1,16 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { Tag, Tooltip, Typography, Button } from 'antd'
+import { Tag, Tooltip, Typography, Button, Segmented } from 'antd'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlassChart } from '@fortawesome/free-solid-svg-icons'
 import { PigmentTemperatureDataUI, ProfundidadeDataUI, PigmentAnalysisDataUI } from '@/lib/types-ui'
 import { hexToRgb, rgbToHsl } from '../../shared/colorConversion'
-import { getLabelColor, getLabelCategory, COLOR_FIELDS, getWeightForValue, calculateWeightedAverage } from '../../shared/PigmentAnalysisUtils'
+import { getLabelColor, getLabelCategory, COLOR_FIELDS, getWeightForValue, calculateWeightedAverage, calculateAverageFromStep } from '../../shared/PigmentAnalysisUtils'
 import { detectSeasonFromSliders } from '../../shared/seasonDetection'
 import { SliderWithAverageMarker } from './SliderWithAverageMarker'
 import { AverageCalculatorDialog } from './AverageCalculatorDialog'
+import { detectSeasonFromSlidersTwoRule } from '../../shared/seasonDetection'
 
 const { Text } = Typography
 
@@ -31,29 +32,6 @@ interface GeralSummaryComponentProps {
     value: number
   ) => void
   isReadOnly?: boolean
-}
-
-const calculateAverageFromStep = (
-  stepData: PigmentTemperatureDataUI | ProfundidadeDataUI | undefined,
-  stepKey: 'temperatura' | 'intensidade' | 'profundidade'
-): number | null => {
-  if (!stepData) return null
-
-  if (stepKey === 'profundidade') {
-    // For profundidade: just return the single value
-    const profData = stepData as ProfundidadeDataUI
-    return profData.value
-  } else {
-    // For temperatura and intensidade: use weighted average
-    const tempData = stepData as PigmentTemperatureDataUI
-    const values = Object.values(tempData)
-      .filter((v) => v.temperature !== null)
-      .map((v) => v.temperature as number)
-
-    if (values.length === 0) return null
-
-    return calculateWeightedAverage(values)
-  }
 }
 
 const getDesaturatedColor = (hex: string): string => {
@@ -129,6 +107,7 @@ export const GeralSummaryComponent = ({
 }: GeralSummaryComponentProps) => {
   // Dialog state management
   const [openDialog, setOpenDialog] = useState<'temperatura' | 'intensidade' | null>(null)
+  const [selectedRule, setSelectedRule] = useState<'regra-dos-2' | 'regra-dos-3'>('regra-dos-2')
 
   // Calculate averages from individual steps
   const avgTemperatura = calculateAverageFromStep(analysisData.temperatura, 'temperatura')
@@ -153,7 +132,10 @@ export const GeralSummaryComponent = ({
   // Get expected season based on slider positions
   const expectedSeason = detectSeasonFromSliders(geralTemperatura, geralIntensidade, geralProfundidade)
 
-  // Memoize change handlers to prevent unnecessary re-renders
+  // Get expected season based on 2-rule (only temperatura and profundidade)
+  const expectedSeasonTwoRule = detectSeasonFromSlidersTwoRule(geralTemperatura, geralProfundidade)
+
+  // Memorize change handlers to prevent unnecessary re-renders
   const handleTemperaturaChange = useCallback((value: number) => {
     onGeralChange('temperatura', value)
   }, [onGeralChange])
@@ -217,53 +199,116 @@ export const GeralSummaryComponent = ({
         </div>
 
         {/* Expected Season Section */}
-        {expectedSeason && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-gray-700">Estação Resultante</h3>
-
-            <div className="flex gap-3">
-              <Tooltip
-                title={
-                  <div className="text-xs space-y-2">
-                    <div className="font-semibold">Detectado por:</div>
-                    <div className="space-y-1 text-gray-700">
-                      <div>• Temperatura: <span className="font-medium">{getDistance(geralTemperatura)} para o {geralTemperatura && geralTemperatura > 50 ? 'Quente' : 'Frio'}</span></div>
-                      <div>• Intensidade: <span className="font-medium">{getDistance(geralIntensidade)} para o {geralIntensidade && geralIntensidade > 50 ? 'Brilhante' : 'Suave'}</span></div>
-                      <div>• Profundidade: <span className="font-medium">{getDistance(geralProfundidade)} para o {geralProfundidade && geralProfundidade > 50 ? 'Claro' : 'Escuro'}</span></div>
-                    </div>
-                  </div>
-                }
-                color="#fff"
-                destroyOnHidden
-              >
-                <div className="px-3 py-2 rounded bg-gray-100 border border-gray-400 cursor-help hover:bg-gray-200 hover:border-gray-500 transition-all shadow-sm">
-                  <Text className="text-sm font-bold text-gray-900">
-                    {expectedSeason.season}
-                  </Text>
-                </div>
-              </Tooltip>
-
-              <Tooltip
-                title={
-                  <div className="text-xs space-y-2">
-                    <div className="font-semibold">Detectado por:</div>
-                    <div className="space-y-1 text-gray-700">
-                      <div>• Temperatura: <span className="font-medium">{getDistance(geralTemperatura)} para o {geralTemperatura && geralTemperatura > 50 ? 'Quente' : 'Frio'}</span></div>
-                      <div>• Intensidade: <span className="font-medium">{getDistance(geralIntensidade)} para o {geralIntensidade && geralIntensidade > 50 ? 'Brilhante' : 'Suave'}</span></div>
-                      <div>• Profundidade: <span className="font-medium">{getDistance(geralProfundidade)} para o {geralProfundidade && geralProfundidade > 50 ? 'Claro' : 'Escuro'}</span></div>
-                    </div>
-                  </div>
-                }
-                color="#fff"
-                destroyOnHidden
-              >
-                <div className="px-3 py-2 rounded bg-gray-100 border border-gray-400 cursor-help hover:bg-gray-200 hover:border-gray-500 transition-all shadow-sm">
-                  <Text className="text-sm font-bold text-gray-900">
-                    {expectedSeason.variant}
-                  </Text>
-                </div>
-              </Tooltip>
+        {(expectedSeason || expectedSeasonTwoRule) && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-gray-700">Estação Resultante</h3>
+              <Segmented
+                value={selectedRule}
+                onChange={(value) => setSelectedRule(value as 'regra-dos-2' | 'regra-dos-3')}
+                options={[
+                  { label: 'Regra dos 2', value: 'regra-dos-2' },
+                  { label: 'Regra dos 3', value: 'regra-dos-3' },
+                ]}
+                size="small"
+              />
             </div>
+
+            {/* Regra dos 3 */}
+            {selectedRule === 'regra-dos-3' && expectedSeason && (
+              <div className="space-y-2">
+                <div className="flex gap-3">
+                  <Tooltip
+                    title={
+                      <div className="text-xs space-y-2">
+                        <div className="font-semibold">Detectado por:</div>
+                        <div className="space-y-1 text-gray-700">
+                          <div>• Temperatura: <span className="font-medium">{getDistance(geralTemperatura)} para o {geralTemperatura && geralTemperatura > 50 ? 'Quente' : 'Frio'}</span></div>
+                          <div>• Intensidade: <span className="font-medium">{getDistance(geralIntensidade)} para o {geralIntensidade && geralIntensidade > 50 ? 'Brilhante' : 'Suave'}</span></div>
+                          <div>• Profundidade: <span className="font-medium">{getDistance(geralProfundidade)} para o {geralProfundidade && geralProfundidade > 50 ? 'Claro' : 'Escuro'}</span></div>
+                        </div>
+                      </div>
+                    }
+                    color="#fff"
+                    destroyOnHidden
+                  >
+                    <div className="px-3 py-2 rounded bg-gray-100 border border-gray-400 cursor-help hover:bg-gray-200 hover:border-gray-500 transition-all shadow-sm">
+                      <Text className="text-sm font-bold text-gray-900">
+                        {expectedSeason.season}
+                      </Text>
+                    </div>
+                  </Tooltip>
+
+                  <Tooltip
+                    title={
+                      <div className="text-xs space-y-2">
+                        <div className="font-semibold">Detectado por:</div>
+                        <div className="space-y-1 text-gray-700">
+                          <div>• Temperatura: <span className="font-medium">{getDistance(geralTemperatura)} para o {geralTemperatura && geralTemperatura > 50 ? 'Quente' : 'Frio'}</span></div>
+                          <div>• Intensidade: <span className="font-medium">{getDistance(geralIntensidade)} para o {geralIntensidade && geralIntensidade > 50 ? 'Brilhante' : 'Suave'}</span></div>
+                          <div>• Profundidade: <span className="font-medium">{getDistance(geralProfundidade)} para o {geralProfundidade && geralProfundidade > 50 ? 'Claro' : 'Escuro'}</span></div>
+                        </div>
+                      </div>
+                    }
+                    color="#fff"
+                    destroyOnHidden
+                  >
+                    <div className="px-3 py-2 rounded bg-gray-100 border border-gray-400 cursor-help hover:bg-gray-200 hover:border-gray-500 transition-all shadow-sm">
+                      <Text className="text-sm font-bold text-gray-900">
+                        {expectedSeason.variant}
+                      </Text>
+                    </div>
+                  </Tooltip>
+                </div>
+              </div>
+            )}
+
+            {/* Regra dos 2 */}
+            {selectedRule === 'regra-dos-2' && expectedSeasonTwoRule && (
+              <div className="space-y-2">
+                <div className="flex gap-3">
+                  <Tooltip
+                    title={
+                      <div className="text-xs space-y-2">
+                        <div className="font-semibold">Detectado por:</div>
+                        <div className="space-y-1 text-gray-700">
+                          <div>• Temperatura: <span className="font-medium">{getDistance(geralTemperatura)} para o {geralTemperatura && geralTemperatura > 50 ? 'Quente' : 'Frio'}</span></div>
+                          <div>• Profundidade: <span className="font-medium">{getDistance(geralProfundidade)} para o {geralProfundidade && geralProfundidade > 50 ? 'Claro' : 'Escuro'}</span></div>
+                        </div>
+                      </div>
+                    }
+                    color="#fff"
+                    destroyOnHidden
+                  >
+                    <div className="px-3 py-2 rounded bg-gray-100 border border-gray-400 cursor-help hover:bg-gray-200 hover:border-gray-500 transition-all shadow-sm">
+                      <Text className="text-sm font-bold text-gray-900">
+                        {expectedSeasonTwoRule.season}
+                      </Text>
+                    </div>
+                  </Tooltip>
+
+                  <Tooltip
+                    title={
+                      <div className="text-xs space-y-2">
+                        <div className="font-semibold">Detectado por:</div>
+                        <div className="space-y-1 text-gray-700">
+                          <div>• Temperatura: <span className="font-medium">{getDistance(geralTemperatura)} para o {geralTemperatura && geralTemperatura > 50 ? 'Quente' : 'Frio'}</span></div>
+                          <div>• Profundidade: <span className="font-medium">{getDistance(geralProfundidade)} para o {geralProfundidade && geralProfundidade > 50 ? 'Claro' : 'Escuro'}</span></div>
+                        </div>
+                      </div>
+                    }
+                    color="#fff"
+                    destroyOnHidden
+                  >
+                    <div className="px-3 py-2 rounded bg-gray-100 border border-gray-400 cursor-help hover:bg-gray-200 hover:border-gray-500 transition-all shadow-sm">
+                      <Text className="text-sm font-bold text-gray-900">
+                        {expectedSeasonTwoRule.variant}
+                      </Text>
+                    </div>
+                  </Tooltip>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
